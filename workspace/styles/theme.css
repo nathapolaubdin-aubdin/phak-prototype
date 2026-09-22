@@ -1,0 +1,59 @@
+/* ตัวแปรสี (design tokens) — จุดเดียวที่แก้เพื่อเปลี่ยนธีม */
+  :root {
+    --bg-main: #111011;
+    --bg-sidebar: #0f0f0f;
+    --bg-card: #1e1e1e;
+    --bg-navbar: rgba(0,0,0,0.25);
+    --accent-purple: rgba(145,30,242,0.9);
+    --accent-purple-solid: #911EF2;
+    --accent-coral: #F55A48;
+    --grey3: #606060;
+    --grey4: #a7a7a7;
+    --white: #ffffff;
+    --border-subtle: rgba(255,255,255,0.08);
+
+    /* พื้นหลังมืด — สเกลเพิ่มเติม (เรียงจากเข้มสุด → อ่อนสุด) */
+    --bg-page: #000;
+    --bg-panel: #1a1a1a;
+    --bg-surface: #232323;
+    --bg-hover: #282828;
+    --bg-hover-strong: #2c2c2c;
+    --bg-scrollbar: #2e2e2e;
+
+    /* accent ม่วง — เฉดเพิ่มเติม */
+    --accent-purple-light: #c79bf5;
+    --accent-purple-pale: #EDD8FF;
+
+    /* accent ส้ม/แดง — เฉดเพิ่มเติม */
+    --accent-coral-light: #F5A08F;
+
+    /* สีสถานะที่ hardcode เป็น UI chrome (ไม่ใช่สี default ของสถานะที่มาจากข้อมูลโปรเจค) */
+    --status-blue: #378ADD;
+    --status-green: #25A767;
+    --status-yellow: #F0C93E;
+    --status-red: #F5443A;
+
+    /* สี tag คงที่ */
+    --tag-urgent: #FBBF24;
+    --tag-team: #4ADE80;
+
+    /* เทาเศษที่เหลือ */
+    --grey2: #444;
+    --grey-mid: #808080;
+    --grey-pale: #F5F5F5;
+    --grey-light: #ddd;
+    --disabled: #C4C4C4;
+
+    /* จุดเดี่ยวสุดท้าย (ใช้ที่เดียวต่อสี) */
+    --accent-amber: #F5B948;
+    --accent-purple-lighter: #E4CFFB;
+    --grey-steel: #828282;
+    --grey1: #555;
+    --grey-dark: #333;
+    --bg-elevated-alt: #2b2b2b;
+    --bg-elevated-2: #262626;
+    --bg-column: #17171799;
+    --bg-deep: #151515;
+    --bg-deepest: #0D0D0D;
+  }
+
