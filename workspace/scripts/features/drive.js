@@ -26,6 +26,12 @@
     pdf: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v3M9 15h1a1.2 1.2 0 0 0 0-2.4H9v2.4z"/>',
     file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'
   };
+  // Folder glyphs from Figma (node 226:8675 / 226:8680): plain folder vs.
+  // shared folder (people badge). `folder.shared` picks which one renders.
+  const DRV_FOLDER_GLYPH = {
+    normal: 'assets/icons/folder-normal.svg',
+    shared: 'assets/icons/folder-shared.svg'
+  };
   const DRV_FILE_TYPES = {
     txt: { icon: DRV_ICONS.txt, color: 'var(--status-blue)' },
     pdf: { icon: DRV_ICONS.pdf, color: 'var(--accent-coral)' },
@@ -49,10 +55,10 @@
     driveFile('pf4', 'Cookie and Policy.pdf', { date: addDays(TODAY_REF, -3) })
   ];
   const DRV_ORG_FOLDERS = [
-    { id: 'ok-policy', name: 'นโยบายบริษัท', files: [] },
-    { id: 'ok-sop', name: 'SOP', files: [] },
-    { id: 'ok-forms', name: 'แบบฟอร์ม', files: [] },
-    { id: 'ok-base', name: 'ข้อมูลพื้นฐานบริษัท', files: [] }
+    { id: 'ok-policy', name: 'นโยบายบริษัท', shared: true, files: [] },
+    { id: 'ok-sop', name: 'SOP', shared: true, files: [] },
+    { id: 'ok-forms', name: 'แบบฟอร์ม', shared: true, files: [] },
+    { id: 'ok-base', name: 'ข้อมูลพื้นฐานบริษัท', shared: true, files: [] }
   ];
 
   function ensureProjectDriveFiles(project) {
@@ -86,7 +92,7 @@
     return `
       <div class="drv-card" data-drive-folder="${folder.id}">
         <div class="drv-card-thumb drv-folder-thumb">
-          ${opts.iconHtml || `<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--accent-purple-solid)" stroke-width="1.3">${DRV_ICONS.folder}</svg>`}
+          ${opts.iconHtml || `<img class="drv-folder-glyph" src="${folder.shared ? DRV_FOLDER_GLYPH.shared : DRV_FOLDER_GLYPH.normal}" alt="">`}
           ${folder.bookmarked ? `<span class="drv-bookmark"><svg width="16" height="16" viewBox="0 0 24 24">${DRV_ICONS.bookmark}</svg></span>` : ''}
         </div>
         <div class="drv-card-foot">
@@ -455,7 +461,7 @@
       <div class="drv-listing">
         ${driveToolbarHtml('ไดร์งาน', ALL_PROJECTS.length, { icon: DRV_ICONS.workDrive })}
         <div class="drv-grid">
-          ${ALL_PROJECTS.map(p => driveFolderCardHtml({ id: p.keyPrefix, name: p.name, bookmarked: false }, { avatarHtml: `<span class="drv-card-avatar">${driveProjectIconHtml(p)}</span>` })).join('')}
+          ${ALL_PROJECTS.map(p => driveFolderCardHtml({ id: p.keyPrefix, name: p.name, bookmarked: false, shared: true }, { avatarHtml: `<span class="drv-card-avatar">${driveProjectIconHtml(p)}</span>` })).join('')}
         </div>
         ${!ALL_PROJECTS.length ? driveEmptyHtml('ยังไม่มีโปรเจคที่เข้าร่วม') : ''}
       </div>

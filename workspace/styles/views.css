@@ -2532,6 +2532,8 @@
 
 .drv-folder-thumb { background: rgba(145,30,242,0.12); }
 
+.drv-folder-glyph { width: 72px; height: auto; }
+
 .drv-bookmark {
     position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; color: var(--tag-urgent);
     display: flex; align-items: center; justify-content: center;
