@@ -2552,6 +2552,27 @@
 
 .drv-card-more:hover { color: var(--white); }
 
+.drv-grid.is-list { flex-direction: column; flex-wrap: nowrap; gap: 4px; }
+
+.drv-grid.is-list .drv-card {
+    flex-direction: row; align-items: center; justify-content: flex-start;
+    width: 100%; height: auto; padding: 6px 12px; gap: 12px; border-radius: 10px;
+  }
+
+.drv-grid.is-list .drv-card-thumb { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 8px; }
+
+.drv-grid.is-list .drv-folder-glyph { width: 26px; }
+
+.drv-grid.is-list .drv-card-thumb svg { width: 22px; height: 22px; }
+
+.drv-grid.is-list .drv-bookmark { width: 16px; height: 16px; top: 2px; right: 2px; }
+
+.drv-grid.is-list .drv-bookmark svg { width: 12px; height: 12px; }
+
+.drv-grid.is-list .drv-card-foot { flex: 1; padding: 0; min-width: 0; }
+
+.drv-grid.is-list .drv-card-name { font-size: 13px; }
+
 .drv-empty {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     padding: 28px 0; color: var(--grey3); font-size: 12px; border: 1px dashed var(--border-subtle); border-radius: 16px; width: 100%;

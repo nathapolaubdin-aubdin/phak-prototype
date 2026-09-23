@@ -8,6 +8,10 @@
   const driveSidebar = document.getElementById('driveSidebar');
   const drivePage = document.getElementById('drivePage');
 
+  // ----- grid / list view toggle (toolbar buttons, applies to every listing) -----
+  let DRV_VIEW_MODE = 'grid';
+  function driveGridModeClass() { return DRV_VIEW_MODE === 'list' ? 'is-list' : ''; }
+
   const DRV_ICONS = {
     home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/>',
     myDrive: '<path d="M4 15h16"/><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="17.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="11" cy="17.5" r="0.6" fill="currentColor" stroke="none"/>',
@@ -131,7 +135,7 @@
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="transform:rotate(0deg);">${DRV_ICONS.chevDown}</svg>
           <span>${title}</span>
         </div>
-        <div class="drv-grid">${bodyHtml}</div>
+        <div class="drv-grid ${driveGridModeClass()}">${bodyHtml}</div>
       </div>`;
   }
 
@@ -319,8 +323,8 @@
           </div>
           <div class="drv-divider-v"></div>
           <div class="drv-view-toggle">
-            <button class="drv-view-btn" data-stub="1" aria-label="มุมมองลิสต์"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.list}</svg></button>
-            <button class="drv-view-btn active" data-stub="1" aria-label="มุมมองกริด"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.grid}</svg></button>
+            <button class="drv-view-btn ${DRV_VIEW_MODE === 'list' ? 'active' : ''}" data-drive-view="list" aria-label="มุมมองลิสต์"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.list}</svg></button>
+            <button class="drv-view-btn ${DRV_VIEW_MODE === 'grid' ? 'active' : ''}" data-drive-view="grid" aria-label="มุมมองกริด"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.grid}</svg></button>
           </div>
           ${opts.readOnly ? '' : `<button class="drv-add-btn" data-stub="1">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${DRV_ICONS.plusSm}</svg>
@@ -366,6 +370,26 @@
         if (fn) fn();
       });
     });
+    drivePage.querySelectorAll('[data-drive-view]').forEach(el => {
+      el.addEventListener('click', () => {
+        const mode = el.dataset.driveView;
+        if (mode === DRV_VIEW_MODE) return;
+        DRV_VIEW_MODE = mode;
+        driveRerenderCurrent();
+      });
+    });
+  }
+
+  // Re-renders whatever Drive page is currently open, e.g. after switching
+  // grid/list view mode.
+  function driveRerenderCurrent() {
+    const a = DRV_LAST_ACTIVE;
+    if (a.section === 'personal') return a.folderId ? openDrivePersonalFolder(DRV_PERSONAL_FOLDERS.find(f => f.id === a.folderId)) : openDrivePersonal();
+    if (a.section === 'work') return a.projectKey ? openDriveProject(ALL_PROJECTS.find(p => p.keyPrefix === a.projectKey)) : openDriveWork();
+    if (a.section === 'org') return a.folderId ? openDriveOrgFolder(DRV_ORG_FOLDERS.find(f => f.id === a.folderId)) : openDriveOrgKnowledge();
+    if (a.section === 'recent') return openDriveRecent();
+    if (a.section === 'trash') return openDriveTrash();
+    return openDriveHome();
   }
 
   function bindDriveCards(wrap, onOpenFolder) {
@@ -441,7 +465,7 @@
       ${driveTopSearchHtml()}
       <div class="drv-listing">
         ${driveToolbarHtml('ไดร์ของฉัน', DRV_PERSONAL_FOLDERS.length, { icon: DRV_ICONS.myDrive })}
-        <div class="drv-grid">
+        <div class="drv-grid ${driveGridModeClass()}">
           ${DRV_PERSONAL_FOLDERS.map(f => driveFolderCardHtml(f)).join('')}
         </div>
       </div>
@@ -468,7 +492,7 @@
       ${driveTopSearchHtml()}
       <div class="drv-listing">
         ${driveToolbarHtml(folder.name, folder.files.length, { icon: DRV_ICONS.myDrive, crumbLabel: 'ไดร์ของฉัน', crumbKey: 'personal' })}
-        <div class="drv-grid">${folder.files.map(driveFileCardHtml).join('')}</div>
+        <div class="drv-grid ${driveGridModeClass()}">${folder.files.map(driveFileCardHtml).join('')}</div>
         ${!folder.files.length ? driveEmptyHtml('ยังไม่มีไฟล์ในโฟลเดอร์นี้') : ''}
       </div>
     `);
@@ -492,7 +516,7 @@
       ${driveTopSearchHtml()}
       <div class="drv-listing">
         ${driveToolbarHtml('ไดร์งาน', ALL_PROJECTS.length, { icon: DRV_ICONS.workDrive })}
-        <div class="drv-grid">
+        <div class="drv-grid ${driveGridModeClass()}">
           ${ALL_PROJECTS.map(p => driveFolderCardHtml({ id: p.keyPrefix, name: p.name, bookmarked: false, shared: true }, { avatarHtml: `<span class="drv-card-avatar">${driveProjectIconHtml(p)}</span>` })).join('')}
         </div>
         ${!ALL_PROJECTS.length ? driveEmptyHtml('ยังไม่มีโปรเจคที่เข้าร่วม') : ''}
@@ -521,7 +545,7 @@
       ${driveTopSearchHtml()}
       <div class="drv-listing">
         ${driveToolbarHtml(project.name, files.length, { icon: DRV_ICONS.workDrive, crumbLabel: 'ไดร์งาน', crumbKey: 'work' })}
-        <div class="drv-grid">${files.map(driveFileCardHtml).join('')}</div>
+        <div class="drv-grid ${driveGridModeClass()}">${files.map(driveFileCardHtml).join('')}</div>
         ${!files.length ? driveEmptyHtml('ยังไม่มีไฟล์ในโปรเจคนี้') : ''}
       </div>
     `);
@@ -545,7 +569,7 @@
       ${driveTopSearchHtml()}
       <div class="drv-listing">
         ${driveToolbarHtml('ความรู้องค์กรณ์', DRV_ORG_FOLDERS.length, { icon: DRV_ICONS.org, readOnly: true })}
-        <div class="drv-grid">${DRV_ORG_FOLDERS.map(f => driveFolderCardHtml(f)).join('')}</div>
+        <div class="drv-grid ${driveGridModeClass()}">${DRV_ORG_FOLDERS.map(f => driveFolderCardHtml(f)).join('')}</div>
       </div>
     `);
 
@@ -570,7 +594,7 @@
       ${driveTopSearchHtml()}
       <div class="drv-listing">
         ${driveToolbarHtml(folder.name, folder.files.length, { icon: DRV_ICONS.org, readOnly: true, crumbLabel: 'ความรู้องค์กรณ์', crumbKey: 'org' })}
-        <div class="drv-grid">${folder.files.map(driveFileCardHtml).join('')}</div>
+        <div class="drv-grid ${driveGridModeClass()}">${folder.files.map(driveFileCardHtml).join('')}</div>
         ${!folder.files.length ? driveEmptyHtml('ยังไม่มีไฟล์ในหมวดนี้') : ''}
       </div>
     `);
@@ -595,7 +619,7 @@
       ${driveTopSearchHtml()}
       <div class="drv-listing">
         ${driveToolbarHtml('ดูล่าสุด', recentFiles.length, { icon: DRV_ICONS.clock, readOnly: true })}
-        <div class="drv-grid">${recentFiles.map(driveFileCardHtml).join('')}</div>
+        <div class="drv-grid ${driveGridModeClass()}">${recentFiles.map(driveFileCardHtml).join('')}</div>
       </div>
     `);
 
@@ -617,7 +641,7 @@
       ${driveTopSearchHtml()}
       <div class="drv-listing">
         ${driveToolbarHtml('ถังขยะ', 0, { icon: DRV_ICONS.trash, readOnly: true })}
-        <div class="drv-grid"></div>
+        <div class="drv-grid ${driveGridModeClass()}"></div>
         ${driveEmptyHtml('ถังขยะว่างเปล่า')}
       </div>
     `);
