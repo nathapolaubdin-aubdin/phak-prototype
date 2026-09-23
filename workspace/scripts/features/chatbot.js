@@ -5,6 +5,8 @@
     workspacePage.style.display = 'none';
     dashboardPage.style.display = 'none';
     dashboardPage.innerHTML = '';
+    const drvp = document.getElementById('drivePage');
+    if (drvp) { drvp.style.display = 'none'; drvp.innerHTML = ''; }
     document.getElementById('chatbotPage').style.display = 'flex';
     CURRENT_VIEW = null;
 
@@ -68,7 +70,7 @@
         <div class="navbar-tabs">
           <button class="tab active" id="chatNavTab">Chatbot</button>
           <button class="tab" id="chatWorkspaceTab">Workspace</button>
-          <button class="tab" data-stub="1">Drive</button>
+          <button class="tab" id="chatDriveTab">Drive</button>
         </div>
         <button class="notif-btn" aria-label="การแจ้งเตือน" data-stub="1">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
@@ -138,6 +140,7 @@
       chatSidebar.classList.toggle('collapsed');
     });
     document.getElementById('chatWorkspaceTab').addEventListener('click', showWorkspacePage);
+    document.getElementById('chatDriveTab').addEventListener('click', openDriveHome);
     document.getElementById('chatNewBtn').addEventListener('click', () => showToast('เริ่มแชทใหม่ (จำลอง)'));
     document.querySelectorAll('.chat-recent-item').forEach(btn => {
       btn.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้'));

@@ -2495,3 +2495,146 @@
 
 .btn-danger:hover { filter: brightness(1.1); }
 
+/* ---------- Drive ---------- */
+.drv-glow-bg {
+    position: absolute; top: -200px; left: 50%; transform: translateX(-50%); width: 1400px; height: 700px;
+    background: radial-gradient(ellipse at center, rgba(145,30,242,0.2) 0%, rgba(245,90,72,0.08) 40%, rgba(0,0,0,0) 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+.drv-hero {
+    display: flex; flex-direction: column; align-items: center; gap: 32px;
+    max-width: 716px; margin: 64px auto 0; padding: 0 24px; position: relative; z-index: 1;
+  }
+
+.drv-hero .prompt-bar { width: 100%; }
+
+.drv-topsearch { display: flex; justify-content: center; padding: 16px 24px 0; position: relative; z-index: 1; }
+
+.drv-sections { display: flex; flex-direction: column; gap: 24px; max-width: 1038px; margin: 40px auto 24px; padding: 0 24px; position: relative; z-index: 1; }
+
+.drv-section { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+
+.drv-section-head { display: flex; align-items: center; gap: 8px; color: var(--white); font-size: 12px; }
+
+.drv-grid { display: flex; flex-wrap: wrap; gap: 16px; width: 100%; }
+
+.drv-card {
+    background: rgba(255,255,255,0.1); border-radius: 14px; padding: 7px;
+    display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center;
+    width: 193px; height: 193px; flex-shrink: 0; cursor: pointer;
+  }
+
+.drv-card-thumb {
+    position: relative; width: 100%; flex: 1; min-height: 0; border-radius: 15px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+
+.drv-folder-thumb { background: rgba(145,30,242,0.12); }
+
+.drv-bookmark {
+    position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; color: var(--tag-urgent);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+.drv-card-foot { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 8px; gap: 6px; }
+
+.drv-card-name {
+    display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--white);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  }
+
+.drv-card-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--grey3); }
+
+.drv-card-more { background: transparent; border: none; color: var(--grey4); cursor: pointer; flex-shrink: 0; display: flex; padding: 0; }
+
+.drv-card-more:hover { color: var(--white); }
+
+.drv-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    padding: 28px 0; color: var(--grey3); font-size: 12px; border: 1px dashed var(--border-subtle); border-radius: 16px; width: 100%;
+  }
+
+.drv-listing { max-width: 1038px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 24px; position: relative; z-index: 1; }
+
+.drv-toolbar { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+
+.drv-toolbar-title { display: flex; align-items: center; gap: 8px; color: var(--white); }
+
+.drv-toolbar-title .ttl { font-size: 16px; font-weight: 700; }
+
+.drv-toolbar-title .cnt { font-size: 12px; color: var(--grey4); }
+
+.drv-toolbar-actions { display: flex; align-items: center; gap: 16px; }
+
+.drv-filter-chips { display: flex; align-items: center; gap: 8px; }
+
+.drv-filter-chip {
+    display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.25); border: 0.5px solid var(--grey-pale);
+    border-radius: 8px; padding: 4px 8px; color: var(--white); font-size: 12px; font-family: inherit; cursor: pointer;
+  }
+
+.drv-divider-v { width: 1px; height: 25px; background: rgba(255,255,255,0.15); }
+
+.drv-view-toggle { display: flex; align-items: center; gap: 8px; }
+
+.drv-view-btn {
+    width: 34px; height: 34px; border-radius: 8px; background: transparent; border: 0.5px solid transparent;
+    color: var(--grey4); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+
+.drv-view-btn.active { background: rgba(0,0,0,0.25); border-color: var(--white); color: var(--white); }
+
+.drv-add-btn {
+    display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 16px; border-radius: 16px; border: none;
+    background: var(--accent-purple); color: var(--white); font-size: 16px; font-family: inherit; cursor: pointer;
+  }
+
+.drv-add-btn:hover { background: var(--accent-purple-solid); }
+
+/* Drive sidebar nav */
+.drv-nav-home {
+    display: flex; align-items: center; gap: 8px; width: 100%; background: transparent; border: none;
+    color: var(--white); font-size: 12px; font-family: inherit; cursor: pointer; padding: 8px 16px; border-radius: 16px; text-align: left;
+  }
+
+.drv-nav-home.active, .drv-nav-header.active { background: var(--bg-card); }
+
+.drv-nav-home:hover, .drv-nav-header:hover { background: rgba(255,255,255,0.06); }
+
+.drv-nav-group { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+
+.drv-nav-header {
+    display: flex; align-items: center; justify-content: space-between; width: 100%;
+    padding: 8px; border-radius: 16px; cursor: pointer; color: var(--white);
+  }
+
+.drv-nav-header .left { display: flex; align-items: center; gap: 8px; }
+
+.drv-nav-header .label { font-size: 12px; }
+
+.drv-nav-chev { transition: transform 0.15s ease; cursor: pointer; flex-shrink: 0; }
+
+.drv-nav-chev.open { transform: rotate(0deg); }
+
+.drv-nav-chev:not(.open) { transform: rotate(-90deg); }
+
+.drv-nav-subs { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+
+.drv-nav-sub {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 8px 8px 24px;
+    border-radius: 16px; cursor: pointer; color: var(--white); font-size: 12px;
+  }
+
+.drv-nav-sub:hover { background: rgba(255,255,255,0.06); }
+
+.drv-nav-sub.active { background: var(--bg-card); }
+
+.drv-nav-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; color: var(--grey4); }
+
+.drv-nav-footer-links { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding-left: 24px; }
+
+.drv-nav-footer-links .drv-nav-sub { padding-left: 0; }
+
+.drv-storage { color: var(--grey3); font-size: 12px; padding: 8px 0 0; }
+

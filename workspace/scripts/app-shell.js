@@ -1,7 +1,10 @@
   const sidebar = document.getElementById('sidebar');
   const chatSidebar = document.getElementById('chatSidebar');
+  const ALL_PROJECTS = [];
   function ensureNormalSidebar() {
     chatSidebar.style.display = 'none';
+    const driveSb = document.getElementById('driveSidebar');
+    if (driveSb) driveSb.style.display = 'none';
     sidebar.style.display = '';
   }
   document.getElementById('sidebarToggle').addEventListener('click', () => {
@@ -350,6 +353,8 @@
       tab.classList.add('active');
       if (tab.dataset.tab === 'chatbot') {
         openChatbotPage();
+      } else if (tab.dataset.tab === 'drive') {
+        openDriveHome();
       } else if (tab.dataset.tab !== 'workspace') {
         showToast('หน้านี้ยังไม่เปิดใช้งานใน prototype นี้');
       }
@@ -567,6 +572,10 @@
   THAI_IOD_PROJECT.sidebarEl = document.getElementById('sidebarThaiIOD');
   PROLOG_PROJECT.sidebarEl = document.getElementById('sidebarProlog');
   YLG_PROJECT.sidebarEl = document.getElementById('sidebarYLG');
+  // Projects the user has actually joined (excludes YLG, still invite-only) —
+  // ไดร์งาน builds its per-project folders from this list, and new projects
+  // are appended to it in completeProjectCreation().
+  ALL_PROJECTS.push(THAI_IOD_PROJECT, PROLOG_PROJECT);
 
   document.getElementById('sidebarThaiIOD').addEventListener('click', () => openDashboard(THAI_IOD_PROJECT));
   document.getElementById('sidebarProlog').addEventListener('click', () => openDashboard(PROLOG_PROJECT));

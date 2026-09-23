@@ -468,6 +468,8 @@
 
     project.cardEl = card;
     project.sidebarEl = sideRow;
+    ALL_PROJECTS.push(project);
+    if (typeof renderDriveSidebarIfOpen === 'function') renderDriveSidebarIfOpen();
 
     closeModal();
 

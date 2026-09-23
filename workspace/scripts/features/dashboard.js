@@ -5,6 +5,10 @@
     const cbp = document.getElementById('chatbotPage');
     if (cbp) { cbp.style.display = 'none'; cbp.innerHTML = ''; }
     if (chatSidebar) chatSidebar.style.display = 'none';
+    const driveSb = document.getElementById('driveSidebar');
+    if (driveSb) driveSb.style.display = 'none';
+    const drvp = document.getElementById('drivePage');
+    if (drvp) { drvp.style.display = 'none'; drvp.innerHTML = ''; }
     sidebar.style.display = '';
     workspacePage.style.display = '';
     workspacePage.querySelectorAll('.navbar-tabs .tab').forEach(t => {
@@ -129,7 +133,7 @@
         <div class="navbar-tabs">
           <button class="tab" id="pageChatbotTab">Chatbot</button>
           <button class="tab" id="pageWorkspaceTab">Workspace</button>
-          <button class="tab" data-stub="1">Drive</button>
+          <button class="tab" id="pageDriveTab">Drive</button>
         </div>
         <button class="notif-btn" aria-label="การแจ้งเตือน" data-stub="1">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
@@ -202,6 +206,8 @@
     document.getElementById('pageWorkspaceTab').addEventListener('click', showWorkspacePage);
     const cbTab = document.getElementById('pageChatbotTab');
     if (cbTab) cbTab.addEventListener('click', openChatbotPage);
+    const drvTab = document.getElementById('pageDriveTab');
+    if (drvTab) drvTab.addEventListener('click', openDriveHome);
     const dashTab = document.getElementById('pageTab_dashboard');
     if (dashTab) dashTab.addEventListener('click', () => openDashboard(project));
     const boardTab = document.getElementById('pageTab_board');
