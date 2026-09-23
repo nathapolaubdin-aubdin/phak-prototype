@@ -116,7 +116,8 @@
       { status: 'todo', n: 2 },
       { status: 'progress', n: 1 },
       { status: 'review', n: 3 },
-      { status: 'done', n: 4 }
+      { status: 'done', n: 4 },
+      { status: 'todo', n: 2, backlog: true }
     ];
     const memberPool = [
       { avatars: [], extraCount: 0 },
@@ -150,7 +151,8 @@
           avatars: members.avatars,
           extraCount: members.extraCount,
           comments: i % 3 === 0 ? 1 : null,
-          parentKey: (s.status === 'todo' && i === 1) ? `${keyPrefix}-5` : null
+          parentKey: (s.status === 'todo' && i === 1 && !s.backlog) ? `${keyPrefix}-5` : null,
+          backlog: !!s.backlog
         });
         idx++;
       }
@@ -185,6 +187,7 @@
     else if (CURRENT_VIEW === 'time') renderTimeline();
     else if (CURRENT_VIEW === 'calendar') renderCalendarView();
     else if (CURRENT_VIEW === 'type') renderTypeView();
+    else if (CURRENT_VIEW === 'backlog') renderBacklogView();
     else if (CURRENT_VIEW === 'dashboard' && CURRENT_KAN_PROJECT) openDashboard(CURRENT_KAN_PROJECT);
   }
 
@@ -230,10 +233,10 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${st.icon}</svg>
             ${st.label}
           </span>
-          <span class="count" data-count-for="${st.key}">${CURRENT_KAN_PROJECT.tasks.filter(t => t.status === st.key).length}</span>
+          <span class="count" data-count-for="${st.key}">${CURRENT_KAN_PROJECT.tasks.filter(t => t.status === st.key && !t.backlog).length}</span>
         </div>
         <div class="kan-col-body" data-drop="${st.key}">
-          ${CURRENT_KAN_PROJECT.tasks.filter(t => t.status === st.key).map(t => buildKanCard(t)).join('')}
+          ${CURRENT_KAN_PROJECT.tasks.filter(t => t.status === st.key && !t.backlog).map(t => buildKanCard(t)).join('')}
         </div>
         <div class="kan-col-footer">
           <button class="kan-add-task-btn" data-add-task="${st.key}">+ เพิ่มงาน</button>

@@ -33,7 +33,7 @@
   function renderTypeView() {
     const wrap = document.getElementById('typWrap');
     if (!wrap) return;
-    const tasks = CURRENT_KAN_PROJECT.tasks || [];
+    const tasks = (CURRENT_KAN_PROJECT.tasks || []).filter(t => !t.backlog);
 
     const groupsHtml = TAG_TYPES.map(tag => {
       const groupTasks = tasks.filter(t => t.tagKey === tag.key);

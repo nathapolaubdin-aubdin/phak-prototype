@@ -9,7 +9,7 @@
     }
   }
 
-  function openTaskModal(project, statusKey, parentInfo, level, presetTagKey) {
+  function openTaskModal(project, statusKey, parentInfo, level, presetTagKey, markBacklog) {
     level = level || 1;
     const overlay = document.getElementById('taskModalOverlay');
     if (project._taskCounter === undefined) project._taskCounter = project.tasks.length;
@@ -415,13 +415,14 @@
         avatars: chosenAssignees,
         extraCount: 0,
         comments: null,
-        parentKey: parent ? parent.key : null
+        parentKey: parent ? parent.key : null,
+        backlog: !!markBacklog
       });
 
       closeTopTaskModal();
       refreshCurrentView();
       notifyTasksChanged();
-      showToast(`สร้างงาน ${newKey} สำเร็จ`);
+      showToast(markBacklog ? `เพิ่มงาน ${newKey} ลงงานค้างแล้ว` : `สร้างงาน ${newKey} สำเร็จ`);
     });
   }
 

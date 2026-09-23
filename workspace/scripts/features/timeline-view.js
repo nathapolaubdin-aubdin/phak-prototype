@@ -27,7 +27,7 @@
     const wrap = document.getElementById('tlWrap');
     if (!wrap) return;
     const project = CURRENT_KAN_PROJECT;
-    const topLevel = project.tasks.filter(t => !t.parentKey);
+    const topLevel = project.tasks.filter(t => !t.parentKey && !t.backlog);
     const dayW = TL_DAY_WIDTH[TL_ZOOM];
 
     const rangeStart = addDays(TODAY_REF, -TL_RANGE_BEFORE);

@@ -76,7 +76,7 @@
     const wrap = document.getElementById('lstWrap');
     if (!wrap) return;
     const project = CURRENT_KAN_PROJECT;
-    let topLevel = project.tasks.filter(t => !t.parentKey);
+    let topLevel = project.tasks.filter(t => !t.parentKey && !t.backlog);
     topLevel = sortTasksBy(topLevel, LST_SORT.key, LST_SORT.dir);
     const gridTemplate = `48px ${LST_COLUMN_ORDER.map(k => LST_COLUMN_DEFS[k].width).join(' ')}`;
 
@@ -164,7 +164,7 @@
       ? `<div class="lst-table">${headHtml}${rowsHtml}</div>`
       : `<div class="lst-table">${headHtml}</div><div class="lst-empty">ยังไม่มีงานในโปรเจคนี้</div>`;
 
-    const counts = KAN_STATUSES.map(s => ({ s, n: project.tasks.filter(t => t.status === s.key).length }));
+    const counts = KAN_STATUSES.map(s => ({ s, n: project.tasks.filter(t => t.status === s.key && !t.backlog).length }));
 
     wrap.innerHTML = bodyHtml + `
       <div class="lst-footer">

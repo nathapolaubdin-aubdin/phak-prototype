@@ -48,7 +48,7 @@
   // Live project overview derived from the project's real tasks, grouped by the
   // same KAN_STATUSES the board / list / type views use.
   function computeProjectStats(project) {
-    const tasks = project.tasks || [];
+    const tasks = (project.tasks || []).filter(t => !t.backlog);
     const total = tasks.length;
     const stats = KAN_STATUSES.map(st => {
       const count = tasks.filter(t => t.status === st.key).length;
@@ -186,7 +186,7 @@
       <div class="dash-navbar" style="height:auto; padding: 16px 24px 0;">
         ${tabsHtml}
         <div class="spacer"></div>
-        <button class="view-tab" data-stub="1"><img src="assets/icons/backlog.svg" width="16" height="16" alt="" />งานค้าง</button>
+        <button class="view-tab ${activeTab === 'backlog' ? 'active' : ''}" id="pageTab_backlog"><img src="assets/icons/backlog.svg" width="16" height="16" alt="" />งานค้าง</button>
       </div>
     `;
   }
@@ -212,6 +212,8 @@
     if (calTab) calTab.addEventListener('click', () => openCalendarView(project));
     const typeTab = document.getElementById('pageTab_type');
     if (typeTab) typeTab.addEventListener('click', () => openTypeView(project));
+    const backlogTab = document.getElementById('pageTab_backlog');
+    if (backlogTab) backlogTab.addEventListener('click', () => openBacklogView(project));
   }
 
   function openDashboard(project) {

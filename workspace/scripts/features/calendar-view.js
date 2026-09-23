@@ -57,7 +57,7 @@
     const numWeeks = totalDays / 7;
 
     const VISIBLE_LANES = 3;
-    const allTasks = project.tasks.filter(t => t.startDate && t.dueDate && !CAL_STATUS_FILTER.has(t.status));
+    const allTasks = project.tasks.filter(t => t.startDate && t.dueDate && !CAL_STATUS_FILTER.has(t.status) && !t.backlog);
     const activeStatusCount = KAN_STATUSES.length - CAL_STATUS_FILTER.size;
     const laneOf = calAssignLanes(allTasks);
 
