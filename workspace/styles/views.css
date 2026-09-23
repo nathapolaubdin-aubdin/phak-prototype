@@ -914,7 +914,7 @@
 
 .proj-menu-item:hover, .proj-menu-item:focus-visible { background: rgba(255,255,255,0.08); outline: none; }
 
-.proj-menu-item img { width: 16px; height: 16px; flex-shrink: 0; }
+.proj-menu-item img, .proj-menu-item svg { width: 16px; height: 16px; flex-shrink: 0; }
 
 .proj-menu-item .hint { color: var(--grey-mid); }
 
@@ -2469,4 +2469,27 @@
   }
 
 .ps-remove-cover:hover { text-decoration: underline; }
+
+/* ---------- Confirm delete task modal ---------- */
+.cdt-overlay { z-index: 400; }
+
+.cdt-box { width: 400px; min-height: 0; }
+
+.cdt-icon {
+    width: 48px; height: 48px; border-radius: 50%; background: rgba(245,90,72,0.12); color: var(--accent-coral);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+  }
+
+.cdt-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+
+.cdt-desc { font-size: 13px; color: var(--grey4); line-height: 1.6; }
+
+.cdt-desc b { color: var(--white); }
+
+.btn-danger {
+    height: 36px; padding: 0 20px; border-radius: 16px; border: none;
+    background: var(--accent-coral); color: var(--white); font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+
+.btn-danger:hover { filter: brightness(1.1); }
 

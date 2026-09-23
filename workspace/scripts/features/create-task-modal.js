@@ -101,7 +101,7 @@
             <button class="tm-icon-btn" id="tmShareBtn" aria-label="แชร์">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
             </button>
-            <button class="tm-icon-btn" id="tmMoreBtn" aria-label="เพิ่มเติม">
+            <button class="tm-icon-btn" id="tmMoreBtn" data-task-more-menu aria-haspopup="menu" aria-expanded="false" aria-label="เพิ่มเติม">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>
             </button>
             <button class="tm-icon-btn" id="tmExpandBtn" aria-label="ขยาย">
@@ -376,7 +376,7 @@
     modalNode.querySelector('#tmCloseBtn').addEventListener('click', closeTopTaskModal);
     modalNode.querySelector('#tmCancelBtn').addEventListener('click', closeTopTaskModal);
 
-    ['tmAiBtn', 'tmShareBtn', 'tmMoreBtn', 'tmExpandBtn'].forEach(id => {
+    ['tmAiBtn', 'tmShareBtn', 'tmExpandBtn'].forEach(id => {
       const el = modalNode.querySelector('#' + id);
       if (el) el.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้'));
     });

@@ -295,6 +295,28 @@
     </div>
   </div>
 
+  <!-- Confirm permanent task delete (opened from the task modal's ⋯ menu) -->
+  <div class="modal-overlay cdt-overlay" id="confirmDeleteTaskOverlay">
+    <div class="modal-box cdt-box">
+      <div class="modal-form">
+        <div>
+          <div class="cdt-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="cdt-title">ลบงานนี้ถาวร?</div>
+          <div class="cdt-desc">
+            งาน <b id="cdtTaskKey"></b> — <span id="cdtTaskTitle"></span> จะถูกลบออกจากระบบทันที<span id="cdtSubtaskNote"></span>
+            การลบนี้เป็นการลบถาวร <b>ไม่สามารถกู้คืนกลับมาได้ไม่ว่ากรณีใดๆ</b>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" id="cdtCancel">ยกเลิก</button>
+          <button class="btn-danger" id="cdtConfirm">ลบถาวร</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="task-modal-overlay" id="taskModalOverlay"></div>
 
   <div class="toast" id="toast"></div>

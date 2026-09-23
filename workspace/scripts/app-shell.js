@@ -132,19 +132,22 @@
 
   // Builds one dropdown menu (a fixed-position .proj-menu opened from any element matching `trigger`).
   // Wired by event delegation so triggers can be re-rendered; each menu only reacts to its own items.
-  function createDropdownMenu({ id, extraClass, groups, trigger, onPick }) {
+  function createDropdownMenu({ id, extraClass, groups, buildGroups, trigger, onPick }) {
     const menu = document.createElement('div');
     menu.className = 'proj-menu' + (extraClass ? ' ' + extraClass : '');
     menu.id = id;
     menu.setAttribute('role', 'menu');
     menu.hidden = true;
-    menu.innerHTML = groups.map(group => `
-      <div class="proj-menu-group">${group.map(item => `
-        <button type="button" class="proj-menu-item" role="menuitem" data-action="${item.action || ''}">
-          <img src="${PROJ_MENU_ICONS[item.icon]}" alt="">
-          <span>${item.label}</span>${item.hint ? `<span class="hint">${item.hint}</span>` : ''}
-        </button>`).join('')}
-      </div>`).join('<div class="proj-menu-sep" role="separator"></div>');
+    function renderGroups(gs) {
+      menu.innerHTML = gs.map(group => `
+        <div class="proj-menu-group">${group.map(item => `
+          <button type="button" class="proj-menu-item" role="menuitem" data-action="${item.action || ''}">
+            ${item.svg ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${item.svg}</svg>` : `<img src="${PROJ_MENU_ICONS[item.icon]}" alt="">`}
+            <span>${item.label}</span>${item.hint ? `<span class="hint">${item.hint}</span>` : ''}
+          </button>`).join('')}
+        </div>`).join('<div class="proj-menu-sep" role="separator"></div>');
+    }
+    renderGroups(groups || []);
     document.body.appendChild(menu);
 
     let anchor = null;
@@ -155,6 +158,7 @@
       anchor = null;
     }
     function open(btn) {
+      if (buildGroups) renderGroups(buildGroups(btn));
       anchor = btn;
       menu.hidden = false;
       btn.setAttribute('aria-expanded', 'true');
@@ -211,6 +215,133 @@
     groups: [[{ icon: 'status', label: 'จัดการสถานะ', action: 'status' }]],
     trigger: '[data-status-menu]',
     onPick: (action, from) => { if (action === 'status') openStatusManager({ returnFocusTo: from }); }
+  });
+
+  // ⋯ button in the top bar of the create / edit task modals → clone / move to
+  // backlog / delete this task, plus stubbed print & export actions. One global
+  // menu (shared by every stacked task modal): `from` is always that specific
+  // modal's own button, so its content is rebuilt per-open from the task the
+  // clicked modal is showing (`modalNode._tmTask`, set only by the edit modal —
+  // the create modal has no task yet, so those three actions just explain that).
+  const TM_MORE_ICONS = {
+    clone: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V4a2 2 0 0 1 2-2h10"/>',
+    archive: '<rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9"/><line x1="10" y1="13" x2="14" y2="13"/>',
+    pullUp: '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>',
+    print: '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'
+  };
+  let TM_MORE_PENDING_DELETE = null;
+
+  function tmCloneTask(project, task) {
+    if (project._taskCounter === undefined) project._taskCounter = project.tasks.length;
+    project._taskCounter++;
+    const newKey = `${project.keyPrefix || 'TOD'}-${project._taskCounter}`;
+    const clone = {
+      title: `${task.title} (Clone)`,
+      key: newKey,
+      status: task.status,
+      tagKey: task.tagKey,
+      priorityKey: task.priorityKey,
+      date: task.date,
+      startDate: task.startDate,
+      dueDate: task.dueDate,
+      desc: task.desc.slice(),
+      progress: null,
+      progressLabel: '',
+      avatars: task.avatars.slice(),
+      extraCount: task.extraCount,
+      comments: null,
+      parentKey: task.parentKey,
+      backlog: !!task.backlog
+    };
+    project.tasks.push(clone);
+    return clone;
+  }
+
+  createDropdownMenu({
+    id: 'tmMoreMenu',
+    trigger: '[data-task-more-menu]',
+    buildGroups: (btn) => {
+      const modalNode = btn.closest('.task-modal');
+      const task = modalNode && modalNode._tmTask;
+      const backlogItem = (task && task.backlog)
+        ? { action: 'pull-backlog', label: 'ดึงกลับเข้าบอร์ด', svg: TM_MORE_ICONS.pullUp }
+        : { action: 'move-backlog', label: 'ย้ายไปงานค้าง', svg: TM_MORE_ICONS.archive };
+      return [
+        [
+          { action: 'clone', label: 'Clone', svg: TM_MORE_ICONS.clone },
+          backlogItem,
+          { action: 'delete', label: 'ลบงาน', icon: 'trash' }
+        ],
+        [
+          { action: 'print', label: 'Print', svg: TM_MORE_ICONS.print },
+          { action: 'export-word', label: 'Export Word', svg: TM_MORE_ICONS.file },
+          { action: 'export-excel', label: 'Export Excel', svg: TM_MORE_ICONS.file },
+          { action: 'export-html', label: 'Export HTML', svg: TM_MORE_ICONS.file }
+        ]
+      ];
+    },
+    onPick: (action, from) => {
+      if (['print', 'export-word', 'export-excel', 'export-html'].includes(action)) {
+        showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้');
+        return;
+      }
+      const modalNode = from.closest('.task-modal');
+      const task = modalNode && modalNode._tmTask;
+      if (!task) {
+        showToast('บันทึกงานนี้ก่อนถึงจะใช้ตัวเลือกนี้ได้');
+        return;
+      }
+      const project = CURRENT_KAN_PROJECT;
+      if (action === 'clone') {
+        const clone = tmCloneTask(project, task);
+        refreshCurrentView();
+        notifyTasksChanged();
+        showToast(`โคลนงาน ${task.key} เป็น ${clone.key} แล้ว`);
+      } else if (action === 'move-backlog') {
+        task.backlog = true;
+        refreshCurrentView();
+        notifyTasksChanged();
+        showToast(`ย้ายงาน ${task.key} ไปงานค้างแล้ว`);
+      } else if (action === 'pull-backlog') {
+        task.backlog = false;
+        refreshCurrentView();
+        notifyTasksChanged();
+        showToast(`ดึงงาน ${task.key} เข้าบอร์ดแล้ว`);
+      } else if (action === 'delete') {
+        const children = project.tasks.filter(t => t.parentKey === task.key);
+        TM_MORE_PENDING_DELETE = { project, task };
+        document.getElementById('cdtTaskKey').textContent = task.key;
+        document.getElementById('cdtTaskTitle').textContent = task.title;
+        document.getElementById('cdtSubtaskNote').textContent = children.length
+          ? ` รวมถึงงานย่อยอีก ${children.length} รายการ`
+          : '';
+        document.getElementById('confirmDeleteTaskOverlay').classList.add('open');
+      }
+    }
+  });
+
+  document.getElementById('cdtCancel').addEventListener('click', () => {
+    TM_MORE_PENDING_DELETE = null;
+    document.getElementById('confirmDeleteTaskOverlay').classList.remove('open');
+  });
+  document.getElementById('confirmDeleteTaskOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'confirmDeleteTaskOverlay') {
+      TM_MORE_PENDING_DELETE = null;
+      e.currentTarget.classList.remove('open');
+    }
+  });
+  document.getElementById('cdtConfirm').addEventListener('click', () => {
+    if (!TM_MORE_PENDING_DELETE) return;
+    const { project, task } = TM_MORE_PENDING_DELETE;
+    const toRemove = new Set([task.key, ...project.tasks.filter(t => t.parentKey === task.key).map(t => t.key)]);
+    project.tasks = project.tasks.filter(t => !toRemove.has(t.key));
+    TM_MORE_PENDING_DELETE = null;
+    document.getElementById('confirmDeleteTaskOverlay').classList.remove('open');
+    closeTopTaskModal();
+    refreshCurrentView();
+    notifyTasksChanged();
+    showToast(`ลบงาน ${task.key} ถาวรแล้ว`);
   });
 
   document.querySelectorAll('.tab').forEach(tab => {
