@@ -835,6 +835,8 @@
 
 .kan-title-row .icon { color: var(--grey4); }
 
+.kan-title-row img.icon { width: 24px; height: 24px; border-radius: 100px; object-fit: cover; flex-shrink: 0; }
+
 .kan-title-row .title { font-size: 24px; font-weight: 700; }
 
 /* Board toolbar (Figma "Frame 118", node 522:35519): add button on the left, filters + actions on the right */
