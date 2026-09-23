@@ -186,7 +186,7 @@
       <div class="dash-navbar" style="height:auto; padding: 16px 24px 0;">
         ${tabsHtml}
         <div class="spacer"></div>
-        <button class="view-tab" data-stub="1">งานค้าง</button>
+        <button class="view-tab" data-stub="1"><img src="assets/icons/backlog.svg" width="16" height="16" alt="" />งานค้าง</button>
       </div>
     `;
   }
