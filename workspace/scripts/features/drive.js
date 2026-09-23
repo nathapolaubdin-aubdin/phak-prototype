@@ -44,15 +44,15 @@
     return { id, name, type: ext, bookmarked: !!opts.bookmarked, date: opts.date || new Date(TODAY_REF) };
   }
 
-  let DRV_PERSONAL_FOLDERS = [
-    { id: 'p-personal', name: 'ส่วนตัว', bookmarked: false, files: [] },
-    { id: 'p-test', name: 'ทดสอบ', bookmarked: true, files: [] }
-  ];
   let DRV_PERSONAL_FILES = [
     driveFile('pf1', 'How to use.txt', { bookmarked: true }),
     driveFile('pf2', 'Cookie and Policy.pdf', { bookmarked: true }),
     driveFile('pf3', 'How to use.txt', { date: addDays(TODAY_REF, -2) }),
     driveFile('pf4', 'Cookie and Policy.pdf', { date: addDays(TODAY_REF, -3) })
+  ];
+  let DRV_PERSONAL_FOLDERS = [
+    { id: 'p-personal', name: 'ส่วนตัว', bookmarked: false, files: DRV_PERSONAL_FILES },
+    { id: 'p-test', name: 'ทดสอบ', bookmarked: true, files: [] }
   ];
   const DRV_ORG_FOLDERS = [
     { id: 'ok-policy', name: 'นโยบายบริษัท', shared: true, files: [] },
@@ -307,6 +307,7 @@
       <div class="drv-toolbar">
         <div class="drv-toolbar-title">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${opts.icon || DRV_ICONS.folder}</svg>
+          ${opts.crumbLabel ? `<span class="drv-crumb-parent" data-drive-crumb="${opts.crumbKey}">${opts.crumbLabel}</span><span class="drv-crumb-sep">&gt;</span>` : ''}
           <span class="ttl">${title}</span>
           <span class="cnt">(${count} รายการ)</span>
         </div>
@@ -352,11 +353,18 @@
       ${bodyHtml}`;
   }
 
+  const DRV_CRUMB_NAV = { personal: openDrivePersonal, work: openDriveWork, org: openDriveOrgKnowledge };
   function bindDriveShell(project) {
     document.getElementById('driveChatbotTab').addEventListener('click', openChatbotPage);
     document.getElementById('driveWorkspaceTab').addEventListener('click', showWorkspacePage);
     drivePage.querySelectorAll('[data-stub]').forEach(el => {
       el.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้'));
+    });
+    drivePage.querySelectorAll('[data-drive-crumb]').forEach(el => {
+      el.addEventListener('click', () => {
+        const fn = DRV_CRUMB_NAV[el.dataset.driveCrumb];
+        if (fn) fn();
+      });
     });
   }
 
@@ -429,15 +437,39 @@
     CURRENT_VIEW = null;
     DRV_LAST_ACTIVE = { section: 'personal' };
 
-    const items = [...DRV_PERSONAL_FOLDERS, ...DRV_PERSONAL_FILES];
     drivePage.innerHTML = driveShellHtml(`
       ${driveTopSearchHtml()}
       <div class="drv-listing">
-        ${driveToolbarHtml('ไดร์ของฉัน', items.length, { icon: DRV_ICONS.myDrive })}
+        ${driveToolbarHtml('ไดร์ของฉัน', DRV_PERSONAL_FOLDERS.length, { icon: DRV_ICONS.myDrive })}
         <div class="drv-grid">
           ${DRV_PERSONAL_FOLDERS.map(f => driveFolderCardHtml(f)).join('')}
-          ${DRV_PERSONAL_FILES.map(driveFileCardHtml).join('')}
         </div>
+      </div>
+    `);
+
+    renderDriveSidebar(DRV_LAST_ACTIVE);
+    bindDriveShell();
+    bindDriveCards(drivePage, (folderId) => {
+      const folder = DRV_PERSONAL_FOLDERS.find(f => f.id === folderId);
+      if (folder) openDrivePersonalFolder(folder);
+    });
+  }
+
+  function openDrivePersonalFolder(folder) {
+    ensureDriveSidebar();
+    workspacePage.style.display = 'none';
+    dashboardPage.style.display = 'none';
+    document.getElementById('chatbotPage').style.display = 'none';
+    drivePage.style.display = 'block';
+    CURRENT_VIEW = null;
+    DRV_LAST_ACTIVE = { section: 'personal', folderId: folder.id };
+
+    drivePage.innerHTML = driveShellHtml(`
+      ${driveTopSearchHtml()}
+      <div class="drv-listing">
+        ${driveToolbarHtml(folder.name, folder.files.length, { icon: DRV_ICONS.myDrive, crumbLabel: 'ไดร์ของฉัน', crumbKey: 'personal' })}
+        <div class="drv-grid">${folder.files.map(driveFileCardHtml).join('')}</div>
+        ${!folder.files.length ? driveEmptyHtml('ยังไม่มีไฟล์ในโฟลเดอร์นี้') : ''}
       </div>
     `);
 
@@ -488,7 +520,7 @@
     drivePage.innerHTML = driveShellHtml(`
       ${driveTopSearchHtml()}
       <div class="drv-listing">
-        ${driveToolbarHtml(project.name, files.length, { icon: DRV_ICONS.workDrive })}
+        ${driveToolbarHtml(project.name, files.length, { icon: DRV_ICONS.workDrive, crumbLabel: 'ไดร์งาน', crumbKey: 'work' })}
         <div class="drv-grid">${files.map(driveFileCardHtml).join('')}</div>
         ${!files.length ? driveEmptyHtml('ยังไม่มีไฟล์ในโปรเจคนี้') : ''}
       </div>
@@ -537,7 +569,7 @@
     drivePage.innerHTML = driveShellHtml(`
       ${driveTopSearchHtml()}
       <div class="drv-listing">
-        ${driveToolbarHtml(folder.name, folder.files.length, { icon: DRV_ICONS.org, readOnly: true })}
+        ${driveToolbarHtml(folder.name, folder.files.length, { icon: DRV_ICONS.org, readOnly: true, crumbLabel: 'ความรู้องค์กรณ์', crumbKey: 'org' })}
         <div class="drv-grid">${folder.files.map(driveFileCardHtml).join('')}</div>
         ${!folder.files.length ? driveEmptyHtml('ยังไม่มีไฟล์ในหมวดนี้') : ''}
       </div>

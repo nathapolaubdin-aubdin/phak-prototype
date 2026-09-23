@@ -2567,6 +2567,12 @@
 
 .drv-toolbar-title .cnt { font-size: 12px; color: var(--grey4); }
 
+.drv-crumb-parent { font-size: 12px; color: var(--grey3); cursor: pointer; }
+
+.drv-crumb-parent:hover { color: var(--white); }
+
+.drv-crumb-sep { font-size: 12px; color: var(--white); }
+
 .drv-toolbar-actions { display: flex; align-items: center; gap: 16px; }
 
 .drv-filter-chips { display: flex; align-items: center; gap: 8px; }
