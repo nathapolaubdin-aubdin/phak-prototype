@@ -2444,3 +2444,13 @@
     background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 100px; z-index: 5;
   }
 
+/* ---------- Project settings modal (rename / cover image) ---------- */
+.ps-box { width: 400px; min-height: 0; }
+
+.ps-remove-cover {
+    display: block; margin: 8px auto 0; background: transparent; border: none;
+    color: var(--accent-coral); font-size: 12px; font-family: inherit; cursor: pointer; padding: 4px;
+  }
+
+.ps-remove-cover:hover { text-decoration: underline; }
+

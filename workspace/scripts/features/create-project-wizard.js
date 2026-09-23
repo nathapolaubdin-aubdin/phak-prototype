@@ -466,6 +466,9 @@
     projectsList.classList.remove('hidden');
     document.getElementById('projectsHeader').querySelector('.chev').classList.add('open');
 
+    project.cardEl = card;
+    project.sidebarEl = sideRow;
+
     closeModal();
 
     if (mode === 'auto') {

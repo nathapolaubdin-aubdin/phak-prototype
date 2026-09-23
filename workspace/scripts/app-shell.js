@@ -116,7 +116,7 @@
     trash: 'data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiB2aWV3Qm94PSIwIDAgMzIgMzIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSJpY29uYW1vb246dHJhc2giPgo8ZyBpZD0iVW5pb24iPgo8cGF0aCBkPSJNMTMgMTMuNDQ0NEMxMy41NTIzIDEzLjQ0NDQgMTQgMTMuODkyMSAxNCAxNC40NDQ0VjIzLjc3NzhDMTQgMjQuMzMwMSAxMy41NTIzIDI0Ljc3NzggMTMgMjQuNzc3OEMxMi40NDc4IDI0Ljc3NzggMTIuMDAwMSAyNC4zMzAxIDEyIDIzLjc3NzhWMTQuNDQ0NEMxMi4wMDAxIDEzLjg5MjEgMTIuNDQ3OCAxMy40NDQ0IDEzIDEzLjQ0NDRaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNMTkgMTMuNDQ0NEMxOS41NTIzIDEzLjQ0NDQgMjAgMTMuODkyMSAyMCAxNC40NDQ0VjIzLjc3NzhDMjAgMjQuMzMwMSAxOS41NTIzIDI0Ljc3NzggMTkgMjQuNzc3OEMxOC40NDc4IDI0Ljc3NzggMTguMDAwMSAyNC4zMzAxIDE4IDIzLjc3NzhWMTQuNDQ0NEMxOC4wMDAxIDEzLjg5MjEgMTguNDQ3OCAxMy40NDQ0IDE5IDEzLjQ0NDRaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTIzLjUgMUMyNC4wNTIzIDEgMjQuNSAxLjQ0NzcyIDI0LjUgMlY3LjIyMjE5SDI4QzI4LjU1MjMgNy4yMjIxOSAyOSA3LjY2OTkyIDI5IDguMjIyMTlDMjkgOC43NzQ0NyAyOC41NTIzIDkuMjIyMTkgMjggOS4yMjIxOUgyNlYyNi44ODg3QzI2IDI3Ljk2NzUgMjUuNTg3MiAyOS4wMDkzIDI0Ljg0MTMgMjkuNzgyOEMyNC4wOTQyIDMwLjU1NzYgMjMuMDcyOSAzMSAyMiAzMUgxMEM4LjkyNzIgMzEgNy45MDU5MSAzMC41NTc2IDcuMTU4OCAyOS43ODI4QzYuNDEyOTQgMjkuMDA5MyA2LjAwMDA1IDI3Ljk2NzUgNi4wMDAwNSAyNi44ODg3VjkuMjIyMTlINC4wMDAwNUMzLjQ0Nzc2IDkuMjIyMTkgMy4wMDAwNSA4Ljc3NDQ3IDMuMDAwMDUgOC4yMjIxOUMzLjAwMDA3IDcuNjY5OTIgMy40NDc3OCA3LjIyMjE5IDQuMDAwMDUgNy4yMjIxOUg3LjUwMDA1VjJDNy41MDAwNSAxLjQ0NzcyIDcuOTQ3NzYgMSA4LjUwMDA1IDFIMjMuNVpNOC4wMDAwNSAyNi44ODg3QzguMDAwMDUgMjcuNDYwMSA4LjIxOTE5IDI4LjAwMTMgOC41OTg0OSAyOC4zOTQ3QzguOTc2NiAyOC43ODY4IDkuNDgxNTkgMjkgMTAgMjlIMjJDMjIuNTE4NSAyOSAyMy4wMjM1IDI4Ljc4NjggMjMuNDAxNiAyOC4zOTQ3QzIzLjc4MDkgMjguMDAxMyAyNCAyNy40NjAxIDI0IDI2Ljg4ODdWOS4yMjIxOUg4LjAwMDA1VjI2Ljg4ODdaTTkuNTAwMDUgNy4yMjIxOUgyMi41VjNIOS41MDAwNVY3LjIyMjE5WiIgZmlsbD0id2hpdGUiLz4KPC9nPgo8L2c+Cjwvc3ZnPgo='
   };
   const PROJ_MENU_GROUPS = [
-    [{ icon: 'settings', label: 'ตั้งค่าโปรเจค' }],
+    [{ icon: 'settings', label: 'ตั้งค่าโปรเจค', action: 'settings' }],
     [
       { icon: 'status', label: 'จัดการสถาณะ', action: 'status' },
       { icon: 'type', label: 'จัดการประเภท', action: 'type' },
@@ -195,7 +195,8 @@
     groups: PROJ_MENU_GROUPS,
     trigger: '[data-project-settings]',
     onPick: (action, from) => {
-      if (action === 'status') openStatusManager({ returnFocusTo: from });
+      if (action === 'settings') openProjectSettings(CURRENT_KAN_PROJECT);
+      else if (action === 'status') openStatusManager({ returnFocusTo: from });
       else if (action === 'type') openTypeManager({ returnFocusTo: from });
       else if (action === 'roles') openRoleManager(CURRENT_KAN_PROJECT, { returnFocusTo: from });
       else if (action === 'members') openMemberManager(CURRENT_KAN_PROJECT, { returnFocusTo: from });
@@ -428,6 +429,13 @@
   YLG_PROJECT_CARD.style.cursor = 'pointer';
   YLG_PROJECT_CARD.addEventListener('click', (e) => { if (!e.target.closest('[data-stub]')) openInviteGate(YLG_PROJECT); });
   projectGrid.appendChild(YLG_PROJECT_CARD);
+
+  THAI_IOD_PROJECT.cardEl = THAI_IOD_PROJECT_CARD;
+  PROLOG_PROJECT.cardEl = PROLOG_PROJECT_CARD;
+  YLG_PROJECT.cardEl = YLG_PROJECT_CARD;
+  THAI_IOD_PROJECT.sidebarEl = document.getElementById('sidebarThaiIOD');
+  PROLOG_PROJECT.sidebarEl = document.getElementById('sidebarProlog');
+  YLG_PROJECT.sidebarEl = document.getElementById('sidebarYLG');
 
   document.getElementById('sidebarThaiIOD').addEventListener('click', () => openDashboard(THAI_IOD_PROJECT));
   document.getElementById('sidebarProlog').addEventListener('click', () => openDashboard(PROLOG_PROJECT));
