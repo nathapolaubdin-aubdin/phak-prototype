@@ -774,8 +774,8 @@
     { icon: 'menu-note', label: 'โน๊ต', action: 'note' },
     { icon: 'menu-youtube', label: 'YouTube', action: 'youtube' },
     { icon: 'menu-gdrive', label: 'Add from Google Drive', action: 'gdrive' },
-    { icon: 'menu-research', label: 'Advance Research', hint: '(More Token)' },
-    { icon: 'menu-websearch', label: 'Web Search' }
+    { icon: 'menu-research', label: 'Advance Research', hint: '(More Token)', action: 'research' },
+    { icon: 'menu-websearch', label: 'Web Search', action: 'web' }
   ];
 
   const driveAddMenu = document.createElement('div');
@@ -809,6 +809,7 @@
         else if (act === 'upload') driveUploadInput.click();
         else if (act === 'link' || act === 'youtube' || act === 'note') openDriveAddModal(act);
         else if (act === 'gdrive') openGoogleDriveModal();
+        else if (act === 'research' || act === 'web') openAiPanel(act);
         else showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้');
       });
     });
@@ -833,6 +834,8 @@
 
   // New files go into the folder currently open, or the ไดร์ของฉัน root.
   function driveAddTargetFiles() {
+    // Called from the AI panel on other pages too: outside Drive, save to the root.
+    if (drivePage.style.display === 'none') return DRV_PERSONAL_ROOT_FILES;
     const a = DRV_LAST_ACTIVE;
     if (a.section === 'personal' && a.folderId) {
       const f = DRV_PERSONAL_FOLDERS.find(x => x.id === a.folderId);

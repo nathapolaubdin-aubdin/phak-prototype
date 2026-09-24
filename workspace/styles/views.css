@@ -2921,3 +2921,168 @@
 .drv-gd-opt small { display: block; margin-top: 2px; font-size: 11px; line-height: 1.4; color: #a7a7a7; }
 
 .drv-modal-body:has(.drv-gd-opt) { gap: 12px; }
+
+/* ---------- AI panel (right dock) — Figma 510:145750 ---------- */
+.app { --ai-w: 56px; }
+
+.app.ai-open { --ai-w: 395px; }
+
+.main > div { padding-right: var(--ai-w); box-sizing: border-box; transition: padding-right 0.2s ease; }
+
+.main > div > .navbar { margin-right: calc(-1 * var(--ai-w)); }
+
+.ai-toggle {
+    position: absolute; top: 79px; right: 16px; z-index: 60; width: 32px; height: 32px; padding: 4px;
+    display: flex; align-items: center; justify-content: center; background: transparent; border: none; border-radius: 8px; cursor: pointer;
+  }
+
+.ai-toggle:hover { background: rgba(255,255,255,0.08); }
+
+.app.ai-open .ai-toggle { display: none; }
+
+.ai-dock {
+    position: absolute; top: 63px; right: 0; bottom: 0; width: 395px; z-index: 55; box-sizing: border-box;
+    background: rgba(15,15,15,0.9); border-left: 0.5px solid #bababa; padding: 16px;
+    display: none; flex-direction: column; gap: 16px; color: #fff;
+  }
+
+.app.ai-open .ai-dock { display: flex; }
+
+.ai-head { display: flex; align-items: center; justify-content: space-between; flex: none; }
+
+.ai-icon-btn { display: flex; align-items: center; justify-content: center; padding: 4px; background: transparent; border: none; border-radius: 8px; cursor: pointer; color: #fff; }
+
+.ai-icon-btn:hover { background: rgba(255,255,255,0.08); }
+
+.ai-icon-btn.sm { padding: 0; width: 20px; height: 20px; border-radius: 4px; }
+
+.ai-expand { display: flex; align-items: center; gap: 8px; background: none; border: none; color: #fff; font-family: inherit; font-size: 16px; cursor: pointer; }
+
+.ai-scale { position: relative; width: 24px; height: 24px; }
+
+.ai-scale img { position: absolute; left: 16.67%; top: 16.67%; width: 66.67%; height: 66.67%; }
+
+.ai-session { position: relative; display: flex; align-items: center; gap: 8px; flex: none; }
+
+.ai-session-ico { width: 32px; height: 32px; border-radius: 8px; background: #911ef2; display: flex; align-items: center; justify-content: center; flex: none; }
+
+.ai-session-pill {
+    flex: 1; min-width: 0; height: 34px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,0.1); border: none; border-radius: 16px; color: #fff; font-family: inherit; font-size: 16px; font-weight: 300; cursor: pointer;
+  }
+
+.ai-session-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ai-pop {
+    position: absolute; z-index: 5; min-width: 200px; max-height: 260px; overflow-y: auto; padding: 6px;
+    background: #282828; border-radius: 12px; box-shadow: 0 0 4px #000; display: flex; flex-direction: column; gap: 2px;
+  }
+
+.ai-pop[hidden] { display: none; }
+
+.ai-session-pop { top: 40px; left: 40px; right: 0; }
+
+.ai-mode-pop { bottom: 48px; left: 8px; }
+
+.ai-pop-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; background: transparent; border: none;
+    border-radius: 8px; color: #fff; font-family: inherit; font-size: 13px; text-align: left; cursor: pointer;
+  }
+
+.ai-pop-item:hover { background: rgba(255,255,255,0.08); }
+
+.ai-pop-item.on { background: rgba(145,30,242,0.25); }
+
+.ai-pop-item em { font-style: normal; font-size: 11px; color: #808080; white-space: nowrap; }
+
+.ai-msgs { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; padding-bottom: 8px; }
+
+.ai-msgs > :first-child { margin-top: auto; }
+
+.ai-msg { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+
+.ai-msg.user { align-items: flex-end; }
+
+.ai-text p, .ai-bubble p { margin: 0 0 8px; font-size: 16px; line-height: 1.3; }
+
+.ai-text p:last-child, .ai-bubble p:last-child { margin-bottom: 0; }
+
+.ai-bubble { max-width: 85%; padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 16px; }
+
+.ai-typing { color: #a7a7a7; }
+
+.ai-actions { display: flex; gap: 8px; }
+
+.ai-actions button { display: flex; align-items: center; justify-content: center; padding: 2.667px; background: transparent; border: none; border-radius: 3px; cursor: pointer; opacity: 0.85; }
+
+.ai-actions button:hover, .ai-actions button.on { background: rgba(255,255,255,0.15); opacity: 1; }
+
+.ai-sources { display: flex; flex-direction: column; gap: 6px; width: 100%; font-size: 12px; color: #a7a7a7; }
+
+.ai-source { padding: 6px 10px; background: rgba(255,255,255,0.06); border-radius: 8px; color: #fff; }
+
+.ai-source b { display: block; font-size: 11px; font-weight: 500; color: #a7a7a7; }
+
+.ai-card { width: 100%; box-sizing: border-box; padding: 12px; background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.15); border-radius: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.ai-card-title { font-size: 14px; font-weight: 500; }
+
+.ai-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.ai-step { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #808080; }
+
+.ai-step.run, .ai-step.done { color: #fff; }
+
+.ai-step-ico { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #606060; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex: none; }
+
+.ai-step-ico.done { background: #25A767; border-color: #25A767; color: #fff; }
+
+.ai-step-ico.run { border-color: rgba(255,255,255,0.2); border-top-color: #911ef2; animation: drv-spin 0.8s linear infinite; }
+
+.ai-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
+
+.ai-fill { height: 100%; background: linear-gradient(90deg, #911ef2, #f55a48); transition: width 0.4s ease; }
+
+.ai-plan-btns { display: flex; justify-content: flex-end; gap: 8px; }
+
+.ai-btn { height: 30px; padding: 0 14px; border: none; border-radius: 16px; background: #911ef2; color: #fff; font-family: inherit; font-size: 13px; cursor: pointer; }
+
+.ai-btn:hover { filter: brightness(1.12); }
+
+.ai-btn.ghost { background: transparent; color: #f55a48; }
+
+.ai-btn.sm { height: 26px; padding: 0 12px; font-size: 12px; }
+
+.ai-file { flex-direction: row; align-items: center; gap: 10px; }
+
+.ai-file svg { flex: none; }
+
+.ai-file-name { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ai-saved { font-size: 12px; color: #25A767; white-space: nowrap; }
+
+.ai-input {
+    position: relative; flex: none; box-sizing: border-box; min-height: 160px; padding: 8px 8px 8px 16px;
+    background: #282828; border: 0.5px solid #fff; border-radius: 16px; box-shadow: 0 0 50px 4px rgba(245,90,72,0.2);
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+
+.ai-input textarea { flex: 1; width: 100%; resize: none; background: transparent; border: none; outline: none; color: #fff; font-family: inherit; font-size: 16px; font-weight: 300; line-height: 1.3; padding: 0; }
+
+.ai-input textarea::placeholder { color: #606060; }
+
+.ai-input-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+.ai-input-left, .ai-input-right { display: flex; align-items: center; gap: 8px; }
+
+.ai-toolico { position: relative; display: block; width: 20px; height: 20px; }
+
+.ai-toolico img { position: absolute; left: 20%; top: 20%; width: 60%; height: 60%; }
+
+.ai-mode-chip { height: 24px; padding: 0 10px; border: 1px solid rgba(145,30,242,0.6); background: rgba(145,30,242,0.18); border-radius: 12px; color: #fff; font-family: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }
+
+.ai-model { height: 34px; padding: 0 8px; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.1); border: none; border-radius: 16px; color: #fff; font-family: inherit; font-size: 12px; font-weight: 300; cursor: pointer; }
+
+.ai-send { width: 34px; height: 34px; padding: 0; background: none; border: none; cursor: pointer; }
+
+.ai-send:disabled { opacity: 0.4; cursor: not-allowed; }
