@@ -2570,9 +2570,23 @@
 .drv-folder-glyph { width: 104px; height: auto; }
 
 .drv-bookmark {
-    position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; color: var(--tag-urgent);
-    display: flex; align-items: center; justify-content: center;
+    position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; color: #fff; z-index: 1;
+    display: flex; align-items: center; justify-content: center; padding: 0; border: none; background: transparent;
+    cursor: pointer; opacity: 0; transition: opacity 0.15s ease;
   }
+
+.drv-bookmark:not(.on) svg path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+
+.drv-bookmark.on { color: var(--tag-urgent); opacity: 1; }
+
+.drv-card:hover .drv-bookmark { opacity: 1; }
+
+.drv-file-thumb .drv-bookmark:not(.on) { color: #911EF2; }
+
+/* Hover: card fill turns purple (#911EF2 @50%) per Figma */
+.drv-card[data-drive-folder]:hover, .drv-card[data-drive-file]:hover { background: rgba(145,30,242,0.5); }
+
+.drv-card[data-drive-folder], .drv-card[data-drive-file] { transition: background 0.15s ease; }
 
 .drv-card-foot { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 8px; gap: 6px; }
 

@@ -75,8 +75,12 @@
     return project.driveFiles;
   }
 
+  // ไดร์งาน folders are the projects themselves; bookmark state lives on the project.
+  function driveProjectFolder(p) {
+    return { id: p.keyPrefix, name: p.name, shared: true, bookmarked: !!p.driveBookmarked, _project: p };
+  }
   function driveAllFolders() {
-    return [...DRV_PERSONAL_FOLDERS, ...DRV_ORG_FOLDERS];
+    return [...DRV_PERSONAL_FOLDERS, ...DRV_ORG_FOLDERS, ...ALL_PROJECTS.map(driveProjectFolder)];
   }
   function driveAllFiles() {
     let files = DRV_PERSONAL_FILES.slice();
@@ -90,6 +94,34 @@
     return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.workDrive}</svg>`;
   }
 
+  // ----- bookmark (hover the card -> outline icon; click toggles, feeds หน้าหลัก) -----
+  function driveBookmarkBtnHtml(kind, item) {
+    const on = !!item.bookmarked;
+    return `<button class="drv-bookmark ${on ? 'on' : ''}" data-drive-bookmark="${kind}" data-id="${item.id}" aria-label="${on ? 'เอา Bookmark ออก' : 'Bookmark'}"><svg width="18" height="18" viewBox="0 0 24 24">${DRV_ICONS.bookmark}</svg></button>`;
+  }
+
+  function driveToggleBookmark(kind, id) {
+    let label;
+    if (kind === 'file') {
+      const f = driveAllFiles().find(x => x.id === id);
+      if (!f) return;
+      f.bookmarked = !f.bookmarked;
+      label = f.bookmarked ? 'เพิ่มไฟล์ใน "ไฟล์สำคัญ" แล้ว' : 'เอาไฟล์ออกจาก "ไฟล์สำคัญ" แล้ว';
+    } else {
+      const f = driveAllFolders().find(x => x.id === id);
+      if (!f) return;
+      if (f._project) f._project.driveBookmarked = !f._project.driveBookmarked;
+      else f.bookmarked = !f.bookmarked;
+      const on = f._project ? f._project.driveBookmarked : f.bookmarked;
+      label = on ? 'เพิ่มโฟลเดอร์ใน "โฟลเดอร์สำคัญ" แล้ว' : 'เอาโฟลเดอร์ออกจาก "โฟลเดอร์สำคัญ" แล้ว';
+    }
+    const scroller = document.querySelector('main.main');
+    const top = scroller ? scroller.scrollTop : 0;
+    driveRerenderCurrent();
+    if (scroller) scroller.scrollTop = top;
+    showToast(label);
+  }
+
   // ----- folder / file cards (193x193, shared by every listing page) -----
   function driveFolderCardHtml(folder, opts) {
     opts = opts || {};
@@ -97,10 +129,10 @@
       <div class="drv-card" data-drive-folder="${folder.id}">
         <div class="drv-card-thumb drv-folder-thumb">
           ${opts.iconHtml || `<img class="drv-folder-glyph" src="${folder.shared ? DRV_FOLDER_GLYPH.shared : DRV_FOLDER_GLYPH.normal}" alt="">`}
-          ${folder.bookmarked ? `<span class="drv-bookmark"><svg width="16" height="16" viewBox="0 0 24 24">${DRV_ICONS.bookmark}</svg></span>` : ''}
+          ${driveBookmarkBtnHtml('folder', folder)}
         </div>
         <div class="drv-card-foot">
-          <span class="drv-card-name">${opts.avatarHtml || ''}${folder.name}</span>
+          <span class="drv-card-name">${opts.avatarHtml || (folder._project ? `<span class="drv-card-avatar">${driveProjectIconHtml(folder._project)}</span>` : '')}${folder.name}</span>
           <button class="drv-card-more" data-stub="1" aria-label="เพิ่มเติม">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.more}</svg>
           </button>
@@ -129,7 +161,7 @@
         <div class="drv-card-thumb drv-file-thumb">
           ${DRV_DOC_MOCK}
           <svg class="drv-file-bigicon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="${meta.color}" stroke-width="1.3">${meta.icon}</svg>
-          ${file.bookmarked ? `<span class="drv-bookmark"><svg width="16" height="16" viewBox="0 0 24 24">${DRV_ICONS.bookmark}</svg></span>` : ''}
+          ${driveBookmarkBtnHtml('file', file)}
         </div>
         <div class="drv-card-foot">
           <span class="drv-card-name">
@@ -423,6 +455,12 @@
   }
 
   function bindDriveCards(wrap, onOpenFolder) {
+    wrap.querySelectorAll('[data-drive-bookmark]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        driveToggleBookmark(btn.dataset.driveBookmark, btn.dataset.id);
+      });
+    });
     wrap.querySelectorAll('[data-drive-folder]').forEach(el => {
       el.addEventListener('click', (e) => {
         if (e.target.closest('[data-stub]')) return;
@@ -476,8 +514,10 @@
     bindDriveShell();
     bindDriveCards(drivePage, (folderId) => {
       const folder = driveAllFolders().find(f => f.id === folderId);
-      if (folder && DRV_ORG_FOLDERS.includes(folder)) return openDriveOrgFolder(folder);
-      openDrivePersonal();
+      if (!folder) return;
+      if (folder._project) return openDriveProject(folder._project);
+      if (DRV_ORG_FOLDERS.includes(folder)) return openDriveOrgFolder(folder);
+      openDrivePersonalFolder(folder);
     });
   }
 
@@ -547,7 +587,7 @@
       <div class="drv-listing">
         ${driveToolbarHtml('ไดร์งาน', ALL_PROJECTS.length, { icon: DRV_ICONS.workDrive })}
         <div class="drv-grid ${driveGridModeClass()}">
-          ${ALL_PROJECTS.map(p => driveFolderCardHtml({ id: p.keyPrefix, name: p.name, bookmarked: false, shared: true }, { avatarHtml: `<span class="drv-card-avatar">${driveProjectIconHtml(p)}</span>` })).join('')}
+          ${ALL_PROJECTS.map(p => driveFolderCardHtml(driveProjectFolder(p))).join('')}
         </div>
         ${!ALL_PROJECTS.length ? driveEmptyHtml('ยังไม่มีโปรเจคที่เข้าร่วม') : ''}
       </div>
