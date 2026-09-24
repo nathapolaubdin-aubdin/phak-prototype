@@ -515,7 +515,7 @@
               <button class="am-new" id="amNew"><img src="${ICON('art-chat')}" width="16" height="16" alt=""><span>New</span></button>
             </div>
           </div>
-          ${groups.length ? groups.map(g => `
+          <div class="am-body">${groups.length ? groups.map(g => `
             <div class="am-group">
               <button class="am-chat" data-am-chat="${g.c.id}"><span class="t">${esc(g.c.title)}</span><span class="time">${U.relTime(g.t)}</span></button>
               <div class="am-list">${g.arts.map(a => `
@@ -523,7 +523,7 @@
                   <span class="am-icon">${typeIconHtml(a)}</span>
                   <span class="am-txt"><span class="nm"><span>${esc(a.short)}</span><img src="${ICON('art-play')}" width="16" height="16" alt="" style="transform:rotate(90deg)"></span><span class="sub">${typeLabel(a)}</span></span>
                 </button>`).join('')}</div>
-            </div>`).join('') : `<div class="am-empty">${q ? 'ไม่พบผลลัพธ์' : 'ยังไม่มีผลงานในแชทใด<br><small>เอกสารที่ AI สร้างจะเก็บเป็นร่างที่นี่ จนกว่าจะบันทึกลงไดร์</small>'}</div>`}
+            </div>`).join('') : `<div class="am-empty">${q ? 'ไม่พบผลลัพธ์' : 'ยังไม่มีผลงานในแชทใด<br><small>เอกสารที่ AI สร้างจะเก็บเป็นร่างที่นี่ จนกว่าจะบันทึกลงไดร์</small>'}</div>`}</div>
         </div>
       </div>`;
     document.getElementById('amSearchBtn').addEventListener('click', () => { amState.search = !amState.search; if (!amState.search) amState.q = ''; renderAm(); const i = document.getElementById('amQ'); if (i) i.focus(); });
@@ -632,7 +632,13 @@
     }));
   }
 
-  U.chatsModal = () => { cmState.q = ''; cmState.search = false; cmState.asc = false; cm.classList.add('open'); renderCm(); };
+  U.chatsModal = (opts) => {
+    cmState.q = ''; cmState.search = !!(opts && opts.search); cmState.asc = false;
+    cm.classList.add('open');
+    renderCm();
+    const i = document.getElementById('cmQ');
+    if (i) i.focus();
+  };
   cm.addEventListener('mousedown', (e) => { if (e.target === cm) closeCm(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cm.classList.contains('open') && !document.querySelector('.chat-menu.cm-pop') && !overlayOpen()) closeCm(); });
   S.subscribe(() => { if (cm.classList.contains('open')) renderCm(); });

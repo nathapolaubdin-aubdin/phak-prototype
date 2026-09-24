@@ -3489,3 +3489,24 @@
 .chat-menu.cm-sort { min-width: 120px; gap: 8px; }
 
 .chat-menu.cm-sort button { font-size: 16px; font-weight: 300; padding: 8px; }
+
+/* Chat / artifact modals keep a fixed height (Figma 732x784); overflowing content scrolls inside */
+.am { height: min(784px, calc(100vh - 64px)); max-height: none; display: flex; flex-direction: column; overflow: hidden; }
+
+.am-inner { flex: 1; min-height: 0; }
+
+.am-head { flex: none; }
+
+.am-body, .cm-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; margin-right: -4px; }
+
+.am-body { display: flex; flex-direction: column; gap: 16px; }
+
+.am-body, .cm-list { scrollbar-width: thin; scrollbar-color: #4a4a4a transparent; }
+
+.am-body::-webkit-scrollbar, .cm-list::-webkit-scrollbar { width: 6px; }
+
+.am-body::-webkit-scrollbar-thumb, .cm-list::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 3px; }
+
+.am-body::-webkit-scrollbar-track, .cm-list::-webkit-scrollbar-track { background: transparent; }
+
+.cm-row, .am-group, .am-empty { flex: none; }

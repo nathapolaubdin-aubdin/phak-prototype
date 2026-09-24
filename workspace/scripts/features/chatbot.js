@@ -91,8 +91,6 @@
     menu.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => { close(); onPick(b.dataset.pick); }));
   }
 
-  let chatSideSearch = false;
-  let chatSideQuery = '';
 
   function renderChatSidebar() {
     const tabs = document.getElementById('chatSideTabs');
@@ -108,10 +106,8 @@
         ${pinned ? `<img class="pin" src="assets/icons/art-pin.svg" width="16" height="16" alt="">` : ''}<img class="more" data-chat-more="${c.id}" src="assets/icons/art-more.svg" width="16" height="16" alt="">
       </div>`;
     };
-    const q = chatSideQuery.trim().toLowerCase();
-    const match = (c) => !q || c.title.toLowerCase().includes(q);
-    const pinned = S.chats.filter(c => c.favorite && match(c)).sort(chatByNewest);
-    const recents = S.chats.filter(c => !c.favorite && match(c)).sort(chatByNewest).slice(0, chatSideQuery.trim() ? 50 : 6); // sidebar shows the latest; Recents opens the full list
+    const pinned = S.chats.filter(c => c.favorite).sort(chatByNewest);
+    const recents = S.chats.filter(c => !c.favorite).sort(chatByNewest).slice(0, 6); // sidebar shows the latest; Recents / search open the full list
     body.innerHTML = `
       <button class="chat-sec-link" id="chatArtRow"><b>Artifact</b>${ic('art-arrow-right')}</button>
       <div class="chat-sec">
@@ -123,23 +119,13 @@
           <button class="chat-sec-link inline" id="chatRecentsToggle"><b>Recents</b>${ic('art-arrow-right')}</button>
           <button class="chat-sec-ico" id="chatSideSearchBtn" aria-label="ค้นหาแชท">${ic('art-search')}</button>
         </div>
-        ${chatSideSearch ? `<input class="chat-side-search" id="chatSideQ" type="text" placeholder="ค้นหาแชท" value="${driveEsc(chatSideQuery)}">` : ''}
         <div class="chat-sec-list">${recents.length ? recents.map(c => item(c, false)).join('') : '<div class="chat-side-empty">ไม่พบแชท</div>'}</div>
       </div>`;
 
     document.getElementById('chatArtRow').addEventListener('click', () => ChatUI.artifactsModal());
     document.getElementById('chatRecentsToggle').addEventListener('click', () => ChatUI.chatsModal());
-    document.getElementById('chatSideSearchBtn').addEventListener('click', () => {
-      chatSideSearch = !chatSideSearch; if (!chatSideSearch) chatSideQuery = '';
-      renderChatSidebar();
-      const qi = document.getElementById('chatSideQ'); if (qi) qi.focus();
-    });
-    const qi = document.getElementById('chatSideQ');
-    if (qi) qi.addEventListener('input', () => {
-      chatSideQuery = qi.value; const pos = qi.selectionStart;
-      renderChatSidebar();
-      const n = document.getElementById('chatSideQ'); n.focus(); n.setSelectionRange(pos, pos);
-    });
+    // The search icon opens the full chat list with its search field focused (search happens in the modal, not the sidebar).
+    document.getElementById('chatSideSearchBtn').addEventListener('click', () => ChatUI.chatsModal({ search: true }));
     body.querySelectorAll('[data-chat]').forEach(el => el.addEventListener('click', (e) => {
       if (e.target.closest('[data-chat-more]')) return;
       ChatStore.open(el.dataset.chat);
