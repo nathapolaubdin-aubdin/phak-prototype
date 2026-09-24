@@ -82,16 +82,25 @@
     return project.driveFiles;
   }
 
-  // ไดร์งาน folders are the projects themselves; bookmark state lives on the project.
-  function driveProjectFolder(p) {
-    return { id: p.keyPrefix, name: p.name, shared: true, bookmarked: !!p.driveBookmarked, _project: p };
-  }
+  // ไดร์งาน has its own folders. A project links to a folder via project.workFolderId, and one
+  // folder can be linked by several projects (or none, e.g. prepared ahead of time).
+  let DRV_WORK_FOLDERS = [];
+  ALL_PROJECTS.forEach(p => {
+    const f = { id: 'wf-' + p.keyPrefix, name: p.name, shared: true, bookmarked: false, files: ensureProjectDriveFiles(p) };
+    DRV_WORK_FOLDERS.push(f);
+    p.workFolderId = f.id;
+  });
+  DRV_WORK_FOLDERS.push({ id: 'wf-review', name: 'งานรีวิว', shared: true, bookmarked: false, files: [] });
+  DRV_WORK_FOLDERS.push({ id: 'wf-survey', name: 'ผลสำรวจ', shared: true, bookmarked: false, files: [] });
+
+  const driveLinkedProjects = (f) => ALL_PROJECTS.filter(p => p.workFolderId === f.id);
+
   function driveAllFolders() {
-    return [...DRV_PERSONAL_FOLDERS, ...DRV_ORG_FOLDERS, ...ALL_PROJECTS.map(driveProjectFolder)];
+    return [...DRV_PERSONAL_FOLDERS, ...DRV_ORG_FOLDERS, ...DRV_WORK_FOLDERS];
   }
   function driveAllFiles() {
     let files = DRV_PERSONAL_FILES.concat(DRV_PERSONAL_ROOT_FILES);
-    ALL_PROJECTS.forEach(p => { files = files.concat(ensureProjectDriveFiles(p)); });
+    DRV_WORK_FOLDERS.forEach(f => { files = files.concat(f.files); });
     return files;
   }
 
@@ -117,9 +126,8 @@
     } else {
       const f = driveAllFolders().find(x => x.id === id);
       if (!f) return;
-      if (f._project) f._project.driveBookmarked = !f._project.driveBookmarked;
-      else f.bookmarked = !f.bookmarked;
-      const on = f._project ? f._project.driveBookmarked : f.bookmarked;
+      f.bookmarked = !f.bookmarked;
+      const on = f.bookmarked;
       label = on ? 'เพิ่มโฟลเดอร์ใน "โฟลเดอร์สำคัญ" แล้ว' : 'เอาโฟลเดอร์ออกจาก "โฟลเดอร์สำคัญ" แล้ว';
     }
     const scroller = document.querySelector('main.main');
@@ -127,6 +135,17 @@
     driveRerenderCurrent();
     if (scroller) scroller.scrollTop = top;
     showToast(label);
+  }
+
+  // Projects linked to a ไดร์งาน folder: shown as an avatar stack on the card, on the sidebar row and as chips on the folder page.
+  function driveLinkedAvatarsHtml(folder) {
+    const linked = DRV_WORK_FOLDERS.includes(folder) ? driveLinkedProjects(folder) : [];
+    if (!linked.length) return '';
+    return `<span class="drv-avatar-stack">${linked.slice(0, 3).map(p => `<span class="drv-card-avatar">${driveProjectIconHtml(p)}</span>`).join('')}${linked.length > 3 ? `<span class="drv-avatar-more">+${linked.length - 3}</span>` : ''}</span>`;
+  }
+  function driveLinkedTitle(folder) {
+    const linked = DRV_WORK_FOLDERS.includes(folder) ? driveLinkedProjects(folder) : [];
+    return linked.length ? `title="ผูกกับโปรเจค: ${linked.map(p => driveEsc(p.name)).join(', ')}"` : '';
   }
 
   // ----- folder / file cards (193x193, shared by every listing page) -----
@@ -139,7 +158,7 @@
           ${driveBookmarkBtnHtml('folder', folder)}
         </div>
         <div class="drv-card-foot">
-          <span class="drv-card-name">${opts.avatarHtml || (folder._project ? `<span class="drv-card-avatar">${driveProjectIconHtml(folder._project)}</span>` : '')}${folder.name}</span>
+          <span class="drv-card-name" ${driveLinkedTitle(folder)}>${opts.avatarHtml || driveLinkedAvatarsHtml(folder)}${folder.name}</span>
           <button class="drv-card-more" data-stub="1" aria-label="เพิ่มเติม">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.more}</svg>
           </button>
@@ -203,11 +222,15 @@
   let DRV_OPEN = { personal: true, work: true, org: true };
 
   function driveSidebarHtml(active) {
-    const projectRows = ALL_PROJECTS.map(p => `
-      <div class="drv-nav-sub ${active.section === 'work' && active.projectKey === p.keyPrefix ? 'active' : ''}" data-drive-project="${p.keyPrefix}">
-        <span class="drv-nav-avatar">${driveProjectIconHtml(p)}</span>
-        <span class="label">${p.name}</span>
-      </div>`).join('');
+    const projectRows = DRV_WORK_FOLDERS.map(f => {
+      const linked = driveLinkedProjects(f);
+      const avatar = linked.length ? driveProjectIconHtml(linked[0]) : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.folder}</svg>`;
+      return `
+      <div class="drv-nav-sub ${active.section === 'work' && active.folderId === f.id ? 'active' : ''}" data-drive-work-folder="${f.id}">
+        <span class="drv-nav-avatar">${avatar}</span>
+        <span class="label">${f.name}</span>
+      </div>`;
+    }).join('');
 
     return `
       <div class="sidebar-top">
@@ -242,13 +265,13 @@
         </div>
 
         <div class="drv-nav-group">
-          <div class="drv-nav-header ${active.section === 'work' && !active.projectKey ? 'active' : ''}" data-drive-toggle="work" data-drive-nav="work">
+          <div class="drv-nav-header ${active.section === 'work' && !active.folderId ? 'active' : ''}" data-drive-toggle="work" data-drive-nav="work">
             <div class="left">
               <svg class="drv-nav-chev ${DRV_OPEN.work ? 'open' : ''}" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">${DRV_ICONS.chevDown}</svg>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.workDrive}</svg>
               <span class="label">ไดร์งาน</span>
             </div>
-            <button class="icon-btn" style="width:16px;height:16px;" data-stub="1" aria-label="เพิ่ม" onclick="event.stopPropagation()">
+            <button class="icon-btn" style="width:16px;height:16px;" data-drive-add-folder="work" aria-label="สร้างโฟลเดอร์ใหม่" onclick="event.stopPropagation()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.plusSm}</svg>
             </button>
           </div>
@@ -323,7 +346,7 @@
     driveSidebar.querySelectorAll('[data-drive-add-folder]').forEach(el => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
-        openNewFolderModal();
+        openNewFolderModal(el.dataset.driveAddFolder === 'work' ? 'work' : 'personal');
       });
     });
     driveSidebar.querySelectorAll('[data-drive-personal-folder]').forEach(el => {
@@ -333,11 +356,11 @@
         if (f) openDrivePersonalFolder(f);
       });
     });
-    driveSidebar.querySelectorAll('[data-drive-project]').forEach(el => {
+    driveSidebar.querySelectorAll('[data-drive-work-folder]').forEach(el => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
-        const p = ALL_PROJECTS.find(pr => pr.keyPrefix === el.dataset.driveProject);
-        if (p) openDriveProject(p);
+        const f = DRV_WORK_FOLDERS.find(x => x.id === el.dataset.driveWorkFolder);
+        if (f) openDriveWorkFolder(f);
       });
     });
     driveSidebar.querySelectorAll('[data-drive-org-folder]').forEach(el => {
@@ -386,6 +409,7 @@
           ${opts.crumbLabel ? `<span class="drv-crumb-parent" data-drive-crumb="${opts.crumbKey}">${opts.crumbLabel}</span><span class="drv-crumb-sep">&gt;</span>` : ''}
           <span class="ttl">${title}</span>
           <span class="cnt">(${count} รายการ)</span>
+          ${opts.chipsHtml ? `<span class="drv-link-chips">${opts.chipsHtml}</span>` : ''}
         </div>
         <div class="drv-toolbar-actions">
           <div class="drv-filter-chips">
@@ -461,7 +485,7 @@
   function driveRerenderCurrent() {
     const a = DRV_LAST_ACTIVE;
     if (a.section === 'personal') return a.folderId ? openDrivePersonalFolder(DRV_PERSONAL_FOLDERS.find(f => f.id === a.folderId)) : openDrivePersonal();
-    if (a.section === 'work') return a.projectKey ? openDriveProject(ALL_PROJECTS.find(p => p.keyPrefix === a.projectKey)) : openDriveWork();
+    if (a.section === 'work') return a.folderId ? openDriveWorkFolder(DRV_WORK_FOLDERS.find(f => f.id === a.folderId)) : openDriveWork();
     if (a.section === 'org') return a.folderId ? openDriveOrgFolder(DRV_ORG_FOLDERS.find(f => f.id === a.folderId)) : openDriveOrgKnowledge();
     if (a.section === 'recent') return openDriveRecent();
     if (a.section === 'trash') return openDriveTrash();
@@ -529,7 +553,7 @@
     bindDriveCards(drivePage, (folderId) => {
       const folder = driveAllFolders().find(f => f.id === folderId);
       if (!folder) return;
-      if (folder._project) return openDriveProject(folder._project);
+      if (DRV_WORK_FOLDERS.includes(folder)) return openDriveWorkFolder(folder);
       if (DRV_ORG_FOLDERS.includes(folder)) return openDriveOrgFolder(folder);
       openDrivePersonalFolder(folder);
     });
@@ -587,7 +611,7 @@
     bindDriveCards(drivePage, () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้'));
   }
 
-  // ----- ไดร์งาน (root: one folder per joined project) -----
+  // ----- ไดร์งาน (root: folders; content can only be added once inside a folder) -----
   function openDriveWork() {
     ensureDriveSidebar();
     workspacePage.style.display = 'none';
@@ -600,38 +624,42 @@
     drivePage.innerHTML = driveShellHtml(`
       ${driveTopSearchHtml()}
       <div class="drv-listing">
-        ${driveToolbarHtml('ไดร์งาน', ALL_PROJECTS.length, { icon: DRV_ICONS.workDrive })}
+        ${driveToolbarHtml('ไดร์งาน', DRV_WORK_FOLDERS.length, { icon: DRV_ICONS.workDrive, addMenu: 'work-root' })}
         <div class="drv-grid ${driveGridModeClass()}">
-          ${ALL_PROJECTS.map(p => driveFolderCardHtml(driveProjectFolder(p))).join('')}
+          ${DRV_WORK_FOLDERS.map(f => driveFolderCardHtml(f)).join('')}
         </div>
-        ${!ALL_PROJECTS.length ? driveEmptyHtml('ยังไม่มีโปรเจคที่เข้าร่วม') : ''}
+        ${!DRV_WORK_FOLDERS.length ? driveEmptyHtml('ยังไม่มีโฟลเดอร์ในไดร์งาน') : ''}
       </div>
     `);
 
     renderDriveSidebar(DRV_LAST_ACTIVE);
     bindDriveShell();
-    bindDriveCards(drivePage, (key) => {
-      const p = ALL_PROJECTS.find(pr => pr.keyPrefix === key);
-      if (p) openDriveProject(p);
+    bindDriveCards(drivePage, (id) => {
+      const f = DRV_WORK_FOLDERS.find(x => x.id === id);
+      if (f) openDriveWorkFolder(f);
     });
   }
 
-  function openDriveProject(project) {
+  function openDriveWorkFolder(folder) {
     ensureDriveSidebar();
     workspacePage.style.display = 'none';
     dashboardPage.style.display = 'none';
     document.getElementById('chatbotPage').style.display = 'none';
     drivePage.style.display = 'block';
     CURRENT_VIEW = null;
-    DRV_LAST_ACTIVE = { section: 'work', projectKey: project.keyPrefix };
+    DRV_LAST_ACTIVE = { section: 'work', folderId: folder.id };
 
-    const files = ensureProjectDriveFiles(project);
+    const linked = driveLinkedProjects(folder);
+    const chips = linked.length
+      ? linked.map(p => `<span class="drv-link-chip"><span class="drv-card-avatar">${driveProjectIconHtml(p)}</span>${driveEsc(p.name)}</span>`).join('')
+      : '<span class="drv-link-chip none">ยังไม่ผูกกับโปรเจค</span>';
     drivePage.innerHTML = driveShellHtml(`
       ${driveTopSearchHtml()}
       <div class="drv-listing">
-        ${driveToolbarHtml(project.name, files.length, { icon: DRV_ICONS.workDrive, crumbLabel: 'ไดร์งาน', crumbKey: 'work' })}
-        <div class="drv-grid ${driveGridModeClass()}">${files.map(driveFileCardHtml).join('')}</div>
-        ${!files.length ? driveEmptyHtml('ยังไม่มีไฟล์ในโปรเจคนี้') : ''}
+        ${driveToolbarHtml(folder.name, folder.files.length, { icon: DRV_ICONS.workDrive, crumbLabel: 'ไดร์งาน', crumbKey: 'work', addMenu: 'folder' })}
+        <div class="drv-link-row"><span class="lbl">ผูกกับโปรเจค</span>${chips}</div>
+        <div class="drv-grid ${driveGridModeClass()}">${folder.files.map(driveFileCardHtml).join('')}</div>
+        ${!folder.files.length ? driveEmptyHtml('ยังไม่มีไฟล์ในโฟลเดอร์นี้ กด "เพิ่ม" เพื่อเริ่มจัดเก็บ') : ''}
       </div>
     `);
 
@@ -740,7 +768,9 @@
   const newFolderInput = document.getElementById('newFolderInput');
   const newFolderError = document.getElementById('newFolderError');
 
-  function openNewFolderModal() {
+  let newFolderKind = 'personal';
+  function openNewFolderModal(kind) {
+    newFolderKind = kind || 'personal';
     newFolderInput.value = '';
     newFolderError.classList.remove('show');
     newFolderOverlay.classList.add('open');
@@ -752,12 +782,15 @@
     // Names are interpolated into innerHTML across Drive, so store them HTML-escaped.
     const name = newFolderInput.value.trim().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     if (!name) { newFolderError.textContent = 'กรอกชื่อโฟลเดอร์ก่อนนะ'; newFolderError.classList.add('show'); return; }
-    if (DRV_PERSONAL_FOLDERS.some(f => f.name === name)) { newFolderError.textContent = 'มีโฟลเดอร์ชื่อนี้อยู่แล้ว'; newFolderError.classList.add('show'); return; }
-    DRV_PERSONAL_FOLDERS.push({ id: 'p-' + Date.now(), name, bookmarked: false, files: [] });
-    DRV_OPEN.personal = true;
+    const list = newFolderKind === 'work' ? DRV_WORK_FOLDERS : DRV_PERSONAL_FOLDERS;
+    if (list.some(f => f.name === name)) { newFolderError.textContent = 'มีโฟลเดอร์ชื่อนี้อยู่แล้ว'; newFolderError.classList.add('show'); return; }
+    const work = newFolderKind === 'work';
+    if (work) DRV_WORK_FOLDERS.push({ id: 'wf-' + Date.now(), name, shared: true, bookmarked: false, files: [] });
+    else DRV_PERSONAL_FOLDERS.push({ id: 'p-' + Date.now(), name, bookmarked: false, files: [] });
+    DRV_OPEN[work ? 'work' : 'personal'] = true;
     closeNewFolderModal();
     showToast('สร้างโฟลเดอร์ "' + newFolderInput.value.trim() + '" แล้ว');
-    openDrivePersonal();
+    if (work) openDriveWork(); else openDrivePersonal();
   }
 
   newFolderInput.addEventListener('input', () => newFolderError.classList.remove('show'));
@@ -787,14 +820,18 @@
   // mode 'root' also offers folder creation; inside a folder it is omitted (no nested folders).
   function toggleDriveAddMenu(btn) {
     if (driveAddMenu.classList.contains('open')) { closeDriveAddMenu(); return; }
-    const canCreateFolder = btn.dataset.driveAddMenu === 'root';
+    const mode = btn.dataset.driveAddMenu;
+    const canCreateFolder = mode === 'root' || mode === 'work-root';
+    // ไดร์งาน root: only folders can be created; content is added inside a folder so work stays organised per project.
+    const locked = mode === 'work-root';
     driveAddMenu.innerHTML = `
       <div class="drv-addmenu-group">${DRV_ADD_ITEMS.map(it => `
-        <button class="drv-addmenu-item" data-add-action="${it.action || 'stub'}">
+        <button class="drv-addmenu-item" data-add-action="${it.action || 'stub'}" ${locked ? 'disabled title="เข้าไปในโฟลเดอร์ก่อน จึงจะเพิ่มเนื้อหาได้"' : ''}>
           <img src="assets/icons/${it.icon}.svg" width="16" height="16" alt="">
           <span>${it.label}</span>${it.hint ? `<span class="hint">${it.hint}</span>` : ''}
         </button>`).join('')}
       </div>
+      ${locked ? '<div class="drv-addmenu-note">เข้าไปในโฟลเดอร์ก่อน จึงจะเพิ่มเนื้อหาได้</div>' : ''}
       ${canCreateFolder ? `
       <img src="assets/icons/menu-line.svg" width="160" height="1" alt="">
       <button class="drv-addmenu-item drv-addmenu-folder" data-add-action="folder">
@@ -805,7 +842,7 @@
       el.addEventListener('click', () => {
         closeDriveAddMenu();
         const act = el.dataset.addAction;
-        if (act === 'folder') openNewFolderModal();
+        if (act === 'folder') openNewFolderModal(locked ? 'work' : 'personal');
         else if (act === 'upload') driveUploadInput.click();
         else if (act === 'link' || act === 'youtube' || act === 'note') openDriveAddModal(act);
         else if (act === 'gdrive') openGoogleDriveModal();
@@ -839,6 +876,10 @@
     const a = DRV_LAST_ACTIVE;
     if (a.section === 'personal' && a.folderId) {
       const f = DRV_PERSONAL_FOLDERS.find(x => x.id === a.folderId);
+      if (f) return f.files;
+    }
+    if (a.section === 'work' && a.folderId) {
+      const f = DRV_WORK_FOLDERS.find(x => x.id === a.folderId);
       if (f) return f.files;
     }
     return DRV_PERSONAL_ROOT_FILES;
@@ -1223,15 +1264,15 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && driveGdOverlay.classList.contains('open') && !gdBusy) closeGoogleDriveModal(); });
 
   // Turn an AI draft (see chat-store.js) into a real Drive file at `dest`.
-  // dest: { type: 'root' } | { type: 'folder', id } | { type: 'project', key }
+  // dest: { type: 'root' } | { type: 'folder', id } | { type: 'work', id }
   function driveSaveArtifact(art, dest) {
     let files, label;
     if (dest.type === 'folder') {
       const f = DRV_PERSONAL_FOLDERS.find(x => x.id === dest.id);
       files = f.files; label = 'ไดร์ของฉัน / ' + f.name;
-    } else if (dest.type === 'project') {
-      const p = ALL_PROJECTS.find(x => x.keyPrefix === dest.key);
-      files = ensureProjectDriveFiles(p); label = 'ไดร์งาน / ' + p.name;
+    } else if (dest.type === 'work') {
+      const f = DRV_WORK_FOLDERS.find(x => x.id === dest.id);
+      files = f.files; label = 'ไดร์งาน / ' + f.name;
     } else {
       files = DRV_PERSONAL_ROOT_FILES; label = 'ไดร์ของฉัน';
     }

@@ -275,9 +275,9 @@
       }
       return { dest: { type: 'root' }, label: 'ไดร์ของฉัน' };
     }
-    if (a.section === 'work' && a.projectKey) {
-      const p = ALL_PROJECTS.find(x => x.keyPrefix === a.projectKey);
-      if (p) return { dest: { type: 'project', key: p.keyPrefix }, label: 'โฟลเดอร์นี้' };
+    if (a.section === 'work' && a.folderId) {
+      const f = DRV_WORK_FOLDERS.find(x => x.id === a.folderId);
+      if (f) return { dest: { type: 'work', id: f.id }, label: 'โฟลเดอร์นี้' };
     }
     return null;
   };
@@ -574,7 +574,7 @@
     const ctx = U.driveContext();
     const opts = [{ dest: { type: 'root' }, label: 'ไดร์ของฉัน', sub: false }]
       .concat(DRV_PERSONAL_FOLDERS.map(f => ({ dest: { type: 'folder', id: f.id }, label: 'ไดร์ของฉัน / ' + f.name, sub: true })))
-      .concat(ALL_PROJECTS.map(p => ({ dest: { type: 'project', key: p.keyPrefix }, label: 'ไดร์งาน / ' + p.name, sub: false })));
+      .concat(DRV_WORK_FOLDERS.map(f => ({ dest: { type: 'work', id: f.id }, label: 'ไดร์งาน / ' + f.name, sub: false })));
     const key = (d) => d.type + ':' + (d.id || d.key || '');
     const defKey = ctx ? key(ctx.dest) : 'root:';
     overlay.innerHTML = `

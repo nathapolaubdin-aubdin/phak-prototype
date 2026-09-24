@@ -3428,3 +3428,30 @@
 .app.ai-chat-open #drivePage .drv-hero { display: none; }
 
 .app.ai-chat-open #drivePage .drv-sections { margin-top: 24px; }
+
+/* ไดร์งาน folders linked to projects */
+.drv-avatar-stack { display: inline-flex; align-items: center; flex: none; }
+
+.drv-avatar-stack .drv-card-avatar { width: 18px; height: 18px; border: 1.5px solid #282828; box-sizing: border-box; }
+
+.drv-avatar-stack .drv-card-avatar + .drv-card-avatar { margin-left: -6px; }
+
+.drv-avatar-more { margin-left: 4px; font-size: 10px; color: #a7a7a7; }
+
+.drv-link-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 8px; }
+
+.drv-link-chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 10px 0 4px; border-radius: 11px; background: rgba(255,255,255,0.08); font-size: 11px; color: #fff; }
+
+.drv-link-chip .drv-card-avatar { width: 16px; height: 16px; }
+
+.drv-link-chip.none { padding: 0 10px; color: #808080; }
+
+.drv-addmenu-item:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.drv-addmenu-item:disabled:hover { background: transparent; }
+
+.drv-addmenu-note { width: 100%; box-sizing: border-box; padding: 0 8px; font-size: 11px; color: #808080; text-align: center; }
+
+.drv-link-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -12px; }
+
+.drv-link-row .lbl { font-size: 12px; color: #808080; margin-right: 4px; }

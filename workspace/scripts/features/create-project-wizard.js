@@ -95,6 +95,11 @@
     document.getElementById('modalSide').style.display = '';
     document.getElementById('folderNameInput').value = '';
     document.getElementById('folderNameInput').placeholder = '';
+    document.getElementById('folderNameInput').readOnly = false;
+    document.getElementById('folderCombo').classList.remove('open', 'linked');
+    document.getElementById('folderComboList').hidden = true;
+    folderChoice = null;
+    const efn = document.getElementById('existingFolderNote'); if (efn) efn.style.display = 'none';
     document.getElementById('uploadedFilesList').innerHTML = '';
     document.getElementById('docFileInput').value = '';
     uploadedDocs = [];
@@ -313,11 +318,62 @@
   const docFileInput = document.getElementById('docFileInput');
   const uploadedFilesList = document.getElementById('uploadedFilesList');
 
+  // ----- ขั้นตอนโฟลเดอร์: สร้างใหม่ (ค่าเริ่มต้น) หรือเลือกโฟลเดอร์ที่มีอยู่ใน ไดร์งาน -----
+  // Several projects may link to the same folder; the list shows how many already do.
+  let folderChoice = null; // null = create a new folder, otherwise a DRV_WORK_FOLDERS id
+  const folderCombo = document.getElementById('folderCombo');
+  const folderComboList = document.getElementById('folderComboList');
+  const chosenFolder = () => folderChoice ? DRV_WORK_FOLDERS.find(f => f.id === folderChoice) || null : null;
+  const fcToolbox = '<span class="fc-ico"><img src="assets/icons/art-toolbox.svg" width="16" height="16" alt=""></span>';
+
+  function resetFolderStep() {
+    folderChoice = null;
+    folderNameInput.readOnly = false;
+    folderNameInput.value = '';
+    folderNameInput.placeholder = projNameInput.value.trim();
+    folderCombo.classList.remove('open', 'linked');
+    folderComboList.hidden = true;
+  }
+  function renderFolderCombo() {
+    const typed = folderNameInput.readOnly ? '' : folderNameInput.value.trim();
+    const label = typed || projNameInput.value.trim();
+    folderComboList.innerHTML =
+      `<button type="button" class="fc-item ${folderChoice ? '' : 'on'}" data-fc="new">${fcToolbox}<span class="nm">${driveEsc(label)}</span><em>สร้างใหม่</em></button>` +
+      DRV_WORK_FOLDERS.map(f => {
+        const linked = driveLinkedProjects(f);
+        const ico = linked.length ? `<span class="fc-ico avatar">${driveProjectIconHtml(linked[0])}</span>` : fcToolbox;
+        return `<button type="button" class="fc-item ${folderChoice === f.id ? 'on' : ''}" data-fc="${f.id}">${ico}<span class="nm">${driveEsc(f.name)}</span>${linked.length ? `<em>ผูก ${linked.length} โปรเจค</em>` : ''}</button>`;
+      }).join('');
+    folderComboList.querySelectorAll('[data-fc]').forEach(b => b.addEventListener('click', () => {
+      const id = b.dataset.fc;
+      if (id === 'new') {
+        folderChoice = null;
+        folderNameInput.readOnly = false;
+        folderNameInput.value = typed;
+        folderCombo.classList.remove('linked');
+        closeFolderCombo();
+        folderNameInput.focus();
+      } else {
+        folderChoice = id;
+        folderNameInput.readOnly = true;
+        folderNameInput.value = chosenFolder().name;
+        folderCombo.classList.add('linked');
+        closeFolderCombo();
+      }
+    }));
+  }
+  function openFolderCombo() { renderFolderCombo(); folderComboList.hidden = false; folderCombo.classList.add('open'); }
+  function closeFolderCombo() { folderComboList.hidden = true; folderCombo.classList.remove('open'); }
+  document.getElementById('folderComboBtn').addEventListener('click', (e) => { e.stopPropagation(); folderComboList.hidden ? openFolderCombo() : closeFolderCombo(); });
+  folderNameInput.addEventListener('focus', () => { if (folderComboList.hidden) openFolderCombo(); });
+  folderNameInput.addEventListener('click', () => { if (folderComboList.hidden) openFolderCombo(); });
+  folderNameInput.addEventListener('input', () => { if (!folderComboList.hidden) renderFolderCombo(); });
+  document.addEventListener('mousedown', (e) => { if (!folderComboList.hidden && !folderCombo.contains(e.target)) closeFolderCombo(); });
+
   document.getElementById('membersCreate').addEventListener('click', () => {
     stepMembers.style.display = 'none';
     modalSide.style.display = 'none';
-    folderNameInput.value = '';
-    folderNameInput.placeholder = projNameInput.value.trim();
+    resetFolderStep();
     stepFolder.classList.add('active');
     folderNameInput.focus();
   });
@@ -333,14 +389,35 @@
     stepFolder.classList.add('active');
   });
 
+  // Files already inside a linked folder count as starting documents too.
+  const existingFileCount = () => { const f = chosenFolder(); return f ? f.files.length : 0; };
+
+  function renderExistingNote() {
+    let note = document.getElementById('existingFolderNote');
+    if (!note) {
+      note = document.createElement('div');
+      note.id = 'existingFolderNote';
+      note.className = 'existing-folder-note';
+      uploadedFilesList.parentNode.insertBefore(note, uploadedFilesList);
+    }
+    const f = chosenFolder();
+    if (!f) { note.style.display = 'none'; return; }
+    note.style.display = '';
+    note.innerHTML = f.files.length
+      ? `เชื่อมกับโฟลเดอร์ <b>${driveEsc(f.name)}</b> · มี <b>${f.files.length} ไฟล์</b> พร้อมใช้งานเป็นเอกสารตั้งต้น (อัปโหลดเพิ่มได้)`
+      : `เชื่อมกับโฟลเดอร์ <b>${driveEsc(f.name)}</b> · ยังไม่มีไฟล์ในโฟลเดอร์ (อัปโหลดเพิ่มได้)`;
+  }
+
   document.getElementById('folderNext').addEventListener('click', () => {
     stepFolder.classList.remove('active');
     stepUpload.classList.add('active');
+    renderExistingNote();
+    updateAutoButtonState();
   });
 
   function updateAutoButtonState() {
     const createAutoBtn = document.getElementById('createAuto');
-    createAutoBtn.disabled = uploadedDocs.length === 0;
+    createAutoBtn.disabled = uploadedDocs.length === 0 && existingFileCount() === 0;
   }
 
   function renderUploadedFiles() {
@@ -407,7 +484,17 @@
   function completeProjectCreation(mode) {
     const name = projNameInput.value.trim();
     const keyText = document.getElementById('keyPill') ? document.getElementById('keyPill').textContent : generateKey(name) + '-';
-    const folderName = folderNameInput.value.trim() || name;
+    // Link to the chosen ไดร์งาน folder, or create a new one (default flow); uploaded files go into it.
+    let folder = chosenFolder();
+    const existingCount = folder ? folder.files.length : 0;
+    if (!folder) {
+      let fname = driveEsc(folderNameInput.value.trim() || name);
+      if (DRV_WORK_FOLDERS.some(f => f.name === fname)) fname += ' (2)';
+      folder = { id: 'wf-' + Date.now(), name: fname, shared: true, bookmarked: false, files: [] };
+      DRV_WORK_FOLDERS.push(folder);
+    }
+    uploadedDocs.forEach((f, i) => folder.files.unshift(driveFile('wu-' + Date.now() + '-' + i, driveEsc(f.name), { previewUrl: /^image\//.test(f.type) ? URL.createObjectURL(f) : null })));
+    const folderName = folder.name;
     const persistentImageUrl = uploadedImageFile ? URL.createObjectURL(uploadedImageFile) : null;
     const EMPTY_STATS = [
       { label: 'สำเร็จ', color: '#25A767', pctText: '00.00%', pct: 0, count: 0 },
@@ -416,11 +503,11 @@
       { label: 'ยังไม่ทำ', color: '#A7A7A7', pctText: '00.00%', pct: 0, count: 0 }
     ];
     const project = {
-      name, key: keyText, folderName,
+      name, key: keyText, folderName, workFolderId: folder.id,
       keyPrefix: keyText.replace(/-$/, ''),
       tasks: [],
       members: selectedMembers.slice(),
-      docCount: uploadedDocs.length,
+      docCount: uploadedDocs.length + existingCount,
       imageUrl: persistentImageUrl,
       total: 0, stats: EMPTY_STATS,
       heatActive: false, heatActivities: 0, heatTasks: 0, heatToday: 0, heatWeek: 0, heatMonth: 0,

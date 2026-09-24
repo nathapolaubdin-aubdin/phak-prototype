@@ -185,3 +185,45 @@
 
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+
+/* Wizard folder step: create new (default) or link an existing ไดร์งาน folder (Figma 507:126255 / 507:126312) */
+.fc-sep { color: #fff; font-size: 12px; }
+
+.folder-combo { position: relative; flex: 1; }
+
+.folder-combo input { width: 100%; box-sizing: border-box; padding-right: 36px !important; }
+
+.folder-combo.open input { border: 1px solid var(--accent-purple-solid); color: var(--accent-purple-solid); }
+
+.folder-combo.linked input { color: var(--accent-purple-solid); cursor: pointer; }
+
+.fc-chev { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; padding: 0; }
+
+.fc-list { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; width: 276px; box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; gap: 10px; background: #282828; border-radius: 16px; box-shadow: 0 0 6px rgba(0,0,0,0.6); max-height: 260px; overflow-y: auto; }
+
+.fc-list[hidden] { display: none; }
+
+.fc-item { display: flex; align-items: center; gap: 8px; height: 32px; flex: none; padding: 8px; background: transparent; border: none; border-radius: 16px; color: #fff; font-family: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+
+.fc-item:hover { background: #1e1e1e; }
+
+.fc-item.on { background: #1e1e1e; color: var(--accent-purple-solid); font-weight: 600; }
+
+.fc-item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.fc-item em { font-style: normal; font-size: 9px; font-weight: 200; color: #606060; white-space: nowrap; }
+
+.fc-ico { width: 24px; height: 24px; flex: none; border-radius: 100px; background: #606060; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+.fc-ico.avatar { background: transparent; }
+
+.fc-ico.avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.existing-folder-note { width: 100%; box-sizing: border-box; padding: 10px 14px; margin-bottom: 12px; border: 1px solid rgba(145,30,242,0.5); background: rgba(145,30,242,0.12); border-radius: 12px; font-size: 12px; color: #d8d8d8; line-height: 1.5; }
+
+.existing-folder-note b { color: #fff; }
+
+/* let the folder dropdown extend past the modal (the side art is hidden on this step) */
+.modal-box:has(#stepFolder.active) { overflow: visible; }
+
+.fc-list { z-index: 50; }
