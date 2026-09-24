@@ -39,13 +39,16 @@
   const DRV_FILE_TYPES = {
     txt: { icon: DRV_ICONS.txt, color: 'var(--status-blue)' },
     pdf: { icon: DRV_ICONS.pdf, color: 'var(--accent-coral)' },
+    docx: { icon: DRV_ICONS.txt, color: '#2B7BE4' },
+    image: { icon: DRV_ICONS.file, color: '#25A767' },
     default: { icon: DRV_ICONS.file, color: 'var(--grey4)' }
   };
 
   function driveFile(id, name, opts) {
     opts = opts || {};
     const ext = (name.split('.').pop() || '').toLowerCase();
-    return { id, name, type: ext, bookmarked: !!opts.bookmarked, date: opts.date || new Date(TODAY_REF) };
+    const type = ({ doc: 'docx', jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image' })[ext] || ext;
+    return { id, name, type, bookmarked: !!opts.bookmarked, date: opts.date || new Date(TODAY_REF), previewUrl: opts.previewUrl || null, note: opts.note || null };
   }
 
   let DRV_PERSONAL_FILES = [
@@ -58,6 +61,8 @@
     { id: 'p-personal', name: 'ส่วนตัว', bookmarked: false, files: DRV_PERSONAL_FILES },
     { id: 'p-test', name: 'ทดสอบ', bookmarked: true, files: [] }
   ];
+  // Files added directly to the ไดร์ของฉัน root (not inside a folder).
+  let DRV_PERSONAL_ROOT_FILES = [];
   const DRV_ORG_FOLDERS = [
     { id: 'ok-policy', name: 'นโยบายบริษัท', shared: true, files: [] },
     { id: 'ok-sop', name: 'SOP', shared: true, files: [] },
@@ -83,7 +88,7 @@
     return [...DRV_PERSONAL_FOLDERS, ...DRV_ORG_FOLDERS, ...ALL_PROJECTS.map(driveProjectFolder)];
   }
   function driveAllFiles() {
-    let files = DRV_PERSONAL_FILES.slice();
+    let files = DRV_PERSONAL_FILES.concat(DRV_PERSONAL_ROOT_FILES);
     ALL_PROJECTS.forEach(p => { files = files.concat(ensureProjectDriveFiles(p)); });
     return files;
   }
@@ -154,13 +159,19 @@
       </ul>
     </div>`;
 
+  function driveDocPreviewHtml(file) {
+    if (file.previewUrl) return `<img class="drv-file-photo" src="${file.previewUrl}" alt="">`;
+    if (file.note) return `<div class="drv-doc" aria-hidden="true">${file.note.title ? `<div class="d-title">${file.note.title}</div>` : ''}<p>${file.note.body}</p></div>`;
+    return DRV_DOC_MOCK;
+  }
+
   function driveFileCardHtml(file) {
     const meta = DRV_FILE_TYPES[file.type] || DRV_FILE_TYPES.default;
     return `
       <div class="drv-card" data-drive-file="${file.id}">
         <div class="drv-card-thumb drv-file-thumb">
-          ${DRV_DOC_MOCK}
-          <svg class="drv-file-bigicon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="${meta.color}" stroke-width="1.3">${meta.icon}</svg>
+          ${driveDocPreviewHtml(file)}
+          ${file.previewUrl ? '' : `<svg class="drv-file-bigicon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="${meta.color}" stroke-width="1.3">${meta.icon}</svg>`}
           ${driveBookmarkBtnHtml('file', file)}
         </div>
         <div class="drv-card-foot">
@@ -535,9 +546,10 @@
     drivePage.innerHTML = driveShellHtml(`
       ${driveTopSearchHtml()}
       <div class="drv-listing">
-        ${driveToolbarHtml('ไดร์ของฉัน', DRV_PERSONAL_FOLDERS.length, { icon: DRV_ICONS.myDrive, addMenu: 'root' })}
+        ${driveToolbarHtml('ไดร์ของฉัน', DRV_PERSONAL_FOLDERS.length + DRV_PERSONAL_ROOT_FILES.length, { icon: DRV_ICONS.myDrive, addMenu: 'root' })}
         <div class="drv-grid ${driveGridModeClass()}">
           ${DRV_PERSONAL_FOLDERS.map(f => driveFolderCardHtml(f)).join('')}
+          ${DRV_PERSONAL_ROOT_FILES.map(driveFileCardHtml).join('')}
         </div>
       </div>
     `);
@@ -755,10 +767,10 @@
   // ----- เมนู "+ เพิ่ม" (Figma node 510:144749) -----
   // Only "สร้างโฟลเดอร์ใหม่" is functional; the rest are prototype stubs.
   const DRV_ADD_ITEMS = [
-    { icon: 'menu-upload', label: 'Upload Files or Photo' },
-    { icon: 'menu-link', label: 'ลิงก์เว็บ' },
-    { icon: 'menu-note', label: 'โน๊ต' },
-    { icon: 'menu-youtube', label: 'YouTube' },
+    { icon: 'menu-upload', label: 'Upload Files or Photo', action: 'upload' },
+    { icon: 'menu-link', label: 'ลิงก์เว็บ', action: 'link' },
+    { icon: 'menu-note', label: 'โน๊ต', action: 'note' },
+    { icon: 'menu-youtube', label: 'YouTube', action: 'youtube' },
     { icon: 'menu-gdrive', label: 'Add from Google Drive' },
     { icon: 'menu-research', label: 'Advance Research', hint: '(More Token)' },
     { icon: 'menu-websearch', label: 'Web Search' }
@@ -776,7 +788,7 @@
     const canCreateFolder = btn.dataset.driveAddMenu === 'root';
     driveAddMenu.innerHTML = `
       <div class="drv-addmenu-group">${DRV_ADD_ITEMS.map(it => `
-        <button class="drv-addmenu-item" data-add-action="stub">
+        <button class="drv-addmenu-item" data-add-action="${it.action || 'stub'}">
           <img src="assets/icons/${it.icon}.svg" width="16" height="16" alt="">
           <span>${it.label}</span>${it.hint ? `<span class="hint">${it.hint}</span>` : ''}
         </button>`).join('')}
@@ -790,7 +802,10 @@
     driveAddMenu.querySelectorAll('[data-add-action]').forEach(el => {
       el.addEventListener('click', () => {
         closeDriveAddMenu();
-        if (el.dataset.addAction === 'folder') openNewFolderModal();
+        const act = el.dataset.addAction;
+        if (act === 'folder') openNewFolderModal();
+        else if (act === 'upload') driveUploadInput.click();
+        else if (act === 'link' || act === 'youtube' || act === 'note') openDriveAddModal(act);
         else showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้');
       });
     });
@@ -805,3 +820,176 @@
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDriveAddMenu(); });
   window.addEventListener('resize', closeDriveAddMenu);
+
+  // ----- เพิ่มไฟล์เข้าไดร์ของฉัน: อัปโหลด / ลิงก์เว็บ / โน๊ต / YouTube -----
+  let DRV_ADD_SEQ = 0;
+
+  function driveEsc(str) {
+    return str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // New files go into the folder currently open, or the ไดร์ของฉัน root.
+  function driveAddTargetFiles() {
+    const a = DRV_LAST_ACTIVE;
+    if (a.section === 'personal' && a.folderId) {
+      const f = DRV_PERSONAL_FOLDERS.find(x => x.id === a.folderId);
+      if (f) return f.files;
+    }
+    return DRV_PERSONAL_ROOT_FILES;
+  }
+
+  function driveAddFile(name, opts) {
+    opts = opts || {};
+    opts.date = new Date(new Date(TODAY_REF).getTime() + 1000 * (++DRV_ADD_SEQ));
+    const file = driveFile('u-' + Date.now() + '-' + DRV_ADD_SEQ, name, opts);
+    driveAddTargetFiles().unshift(file);
+    return file;
+  }
+
+  function driveRefreshKeepScroll() {
+    const scroller = document.querySelector('main.main');
+    const top = scroller ? scroller.scrollTop : 0;
+    driveRerenderCurrent();
+    if (scroller) scroller.scrollTop = top;
+  }
+
+  // 1. Upload from the computer (native file picker)
+  const driveUploadInput = document.createElement('input');
+  driveUploadInput.type = 'file';
+  driveUploadInput.multiple = true;
+  driveUploadInput.style.display = 'none';
+  document.body.appendChild(driveUploadInput);
+  driveUploadInput.addEventListener('change', () => {
+    const files = Array.from(driveUploadInput.files || []);
+    files.forEach(f => {
+      const isImage = /^image\//.test(f.type);
+      driveAddFile(driveEsc(f.name), { previewUrl: isImage ? URL.createObjectURL(f) : null });
+    });
+    driveUploadInput.value = '';
+    if (!files.length) return;
+    driveRefreshKeepScroll();
+    showToast(files.length === 1 ? 'อัปโหลด "' + files[0].name + '" แล้ว' : 'อัปโหลด ' + files.length + ' ไฟล์แล้ว');
+  });
+
+  // 2-4. Link / YouTube / Note modals (Figma 510:143408, 510:143830, 510:144185)
+  const DRV_ADD_MODALS = {
+    link: { icon: 'modal-link', title: 'ลิงก์เว็บ' },
+    youtube: { icon: 'menu-youtube', title: 'YouTube' },
+    note: { icon: 'modal-note', title: 'โน๊ต' }
+  };
+
+  const driveAddOverlay = document.createElement('div');
+  driveAddOverlay.className = 'drv-modal-overlay';
+  document.body.appendChild(driveAddOverlay);
+  let driveAddBusy = false;
+  let driveAddTimer = null;
+
+  function closeDriveAddModal() {
+    clearInterval(driveAddTimer);
+    driveAddBusy = false;
+    driveAddOverlay.classList.remove('open');
+    driveAddOverlay.innerHTML = '';
+  }
+
+  function openDriveAddModal(kind) {
+    const m = DRV_ADD_MODALS[kind];
+    const body = kind === 'note' ? `
+        <div class="drv-modal-field">
+          <label for="drvAddTitle">หัวข้อ (ไม่บังคับ)</label>
+          <input id="drvAddTitle" type="text" placeholder="เช่น บันทึกประชุม" autocomplete="off">
+        </div>
+        <div class="drv-modal-field">
+          <label for="drvAddBody">เนื้อหา</label>
+          <textarea id="drvAddBody" placeholder="โปรดระบุรายละเอียด"></textarea>
+        </div>` : `
+        <div class="drv-modal-field">
+          <label for="drvAddUrl">${kind === 'youtube' ? 'แนบลิงก์ Youtube' : 'แนบลิงก์'}</label>
+          <input id="drvAddUrl" type="text" placeholder="${kind === 'youtube' ? 'Youtube URL' : 'https://...'}" autocomplete="off">
+        </div>`;
+    driveAddOverlay.innerHTML = `
+      <div class="drv-modal" role="dialog" aria-label="${m.title}">
+        <div class="drv-modal-head"><img src="assets/icons/${m.icon}.svg" width="16" height="16" alt=""><span>${m.title}</span></div>
+        <div class="drv-modal-body">${body}<div class="drv-modal-error" id="drvAddError"></div></div>
+        <div class="drv-modal-actions">
+          <button class="drv-modal-cancel" id="drvAddCancel">ยกเลิก</button>
+          <button class="drv-modal-ok" id="drvAddOk">ตกลง</button>
+        </div>
+      </div>`;
+    driveAddOverlay.classList.add('open');
+    const first = driveAddOverlay.querySelector('input');
+    first.focus();
+    const err = document.getElementById('drvAddError');
+    driveAddOverlay.querySelectorAll('input,textarea').forEach(el => el.addEventListener('input', () => { err.textContent = ''; }));
+    document.getElementById('drvAddCancel').addEventListener('click', closeDriveAddModal);
+    document.getElementById('drvAddOk').addEventListener('click', () => submitDriveAddModal(kind));
+    driveAddOverlay.querySelectorAll('input').forEach(el => el.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitDriveAddModal(kind); }));
+  }
+
+  function driveYoutubeId(url) {
+    const m = url.match(/^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i);
+    return m ? m[1] : null;
+  }
+
+  function submitDriveAddModal(kind) {
+    if (driveAddBusy) return;
+    const err = document.getElementById('drvAddError');
+    if (kind === 'note') {
+      const title = document.getElementById('drvAddTitle').value.trim();
+      const text = document.getElementById('drvAddBody').value.trim();
+      if (!title && !text) { err.textContent = 'กรอกหัวข้อหรือเนื้อหาก่อนนะ'; return; }
+      const name = (title || text.split('\n')[0]).slice(0, 40).trim();
+      driveAddFile(driveEsc(name) + '.txt', { note: { title: driveEsc(title), body: driveEsc(text).replace(/\n/g, '<br>') } });
+      closeDriveAddModal();
+      driveRefreshKeepScroll();
+      showToast('สร้างโน๊ต "' + name + '" แล้ว');
+      return;
+    }
+    const url = document.getElementById('drvAddUrl').value.trim();
+    let fileName;
+    let progressText;
+    if (kind === 'youtube') {
+      const id = driveYoutubeId(url);
+      if (!id) { err.textContent = 'ลิงก์ YouTube ไม่ถูกต้อง'; return; }
+      fileName = 'สรุปวิดีโอ YouTube - ' + id + '.docx';
+      progressText = 'AI กำลังสรุปวิดีโอ';
+    } else {
+      let host;
+      try {
+        const u = new URL(url);
+        if (!/^https?:$/.test(u.protocol) || !u.hostname.includes('.')) throw new Error('bad');
+        host = u.hostname.replace(/^www\./, '');
+      } catch (e) { err.textContent = 'กรอกลิงก์ให้ถูกต้อง (เริ่มด้วย https://)'; return; }
+      fileName = 'สรุปเว็บไซต์ - ' + host + '.docx';
+      progressText = 'AI กำลังอ่านเว็บไซต์และสรุป';
+    }
+    // Swap the form for a progress view, then drop in a mock Word file.
+    driveAddBusy = true;
+    const modal = driveAddOverlay.querySelector('.drv-modal');
+    modal.querySelector('.drv-modal-body').innerHTML = `
+      <div class="drv-progress">
+        <div class="drv-spinner"></div>
+        <div class="drv-progress-text">${progressText}<span class="drv-dots"></span></div>
+        <div class="drv-progress-sub">${driveEsc(url)}</div>
+        <div class="drv-progress-track"><div class="drv-progress-fill" id="drvProgressFill"></div></div>
+      </div>`;
+    modal.querySelector('.drv-modal-actions').style.display = 'none';
+    const fill = document.getElementById('drvProgressFill');
+    let pct = 0;
+    driveAddTimer = setInterval(() => {
+      pct += 2;
+      fill.style.width = Math.min(pct, 100) + '%';
+      if (pct >= 100) {
+        clearInterval(driveAddTimer);
+        setTimeout(() => {
+          if (!driveAddBusy) return;
+          driveAddFile(driveEsc(fileName));
+          closeDriveAddModal();
+          driveRefreshKeepScroll();
+          showToast('สรุปเสร็จแล้ว — เพิ่มไฟล์ "' + fileName + '" แล้ว');
+        }, 250);
+      }
+    }, 50);
+  }
+
+  driveAddOverlay.addEventListener('mousedown', (e) => { if (e.target === driveAddOverlay && !driveAddBusy) closeDriveAddModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && driveAddOverlay.classList.contains('open') && !driveAddBusy) closeDriveAddModal(); });

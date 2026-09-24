@@ -2747,3 +2747,77 @@
 .drv-addmenu-item .hint { color: #808080; }
 
 .drv-addmenu-folder { border-radius: 16px; }
+
+.drv-file-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+
+/* Drive add modals — link / YouTube / note (Figma 510:144541, 510:144521, 510:144483) */
+.drv-modal-overlay {
+    position: fixed; inset: 0; z-index: 350; background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center;
+  }
+
+.drv-modal-overlay.open { display: flex; }
+
+.drv-modal {
+    width: 400px; max-width: calc(100vw - 32px); box-sizing: border-box; background: #1e1e1e; border-radius: 16px;
+    box-shadow: 0 4px 4px rgba(0,0,0,0.5); overflow: hidden; padding-bottom: 16px;
+    display: flex; flex-direction: column; gap: 32px; color: #fff;
+  }
+
+.drv-modal-head { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #911ef2; font-size: 12px; }
+
+.drv-modal-body { display: flex; flex-direction: column; gap: 24px; padding: 0 16px; }
+
+.drv-modal-field { display: flex; flex-direction: column; gap: 8px; }
+
+.drv-modal-field label { font-size: 12px; font-weight: 500; }
+
+.drv-modal-field input, .drv-modal-field textarea {
+    width: 100%; box-sizing: border-box; background: transparent; color: #fff; font-family: inherit; font-size: 16px;
+    border: 1px solid #606060; border-radius: 4px; padding: 8px; outline: none;
+  }
+
+.drv-modal-field textarea { height: 155px; resize: none; }
+
+.drv-modal-field input::placeholder, .drv-modal-field textarea::placeholder { color: #606060; }
+
+.drv-modal-field input:focus, .drv-modal-field textarea:focus { border-color: #911ef2; }
+
+.drv-modal-error { font-size: 11px; color: #f55a48; margin-top: -16px; }
+
+.drv-modal-error:empty { display: none; }
+
+.drv-modal-actions { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+
+.drv-modal-cancel {
+    height: 34px; padding: 0 16px; border: none; border-radius: 16px; background: transparent;
+    color: #f55a48; font-family: inherit; font-size: 16px; font-weight: 500; cursor: pointer;
+  }
+
+.drv-modal-ok {
+    height: 34px; padding: 0 16px; border: none; border-radius: 16px; background: #911ef2;
+    color: #fff; font-family: inherit; font-size: 16px; font-weight: 500; cursor: pointer;
+  }
+
+.drv-modal-ok:hover { filter: brightness(1.12); }
+
+.drv-progress { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 0 8px; }
+
+.drv-spinner {
+    width: 32px; height: 32px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: #911ef2; animation: drv-spin 0.8s linear infinite;
+  }
+
+@keyframes drv-spin { to { transform: rotate(360deg); } }
+
+.drv-progress-text { font-size: 14px; font-weight: 500; }
+
+.drv-dots::after { content: ''; animation: drv-dots 1.2s steps(4, end) infinite; }
+
+@keyframes drv-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+.drv-progress-sub { max-width: 100%; font-size: 11px; color: #808080; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.drv-progress-track { width: 100%; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
+
+.drv-progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #911ef2, #f55a48); transition: width 0.05s linear; }
