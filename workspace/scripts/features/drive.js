@@ -108,17 +108,32 @@
       </div>`;
   }
 
+  // Mock page preview shown as the file thumbnail (same content for every file).
+  const DRV_DOC_MOCK = `<div class="drv-doc" aria-hidden="true">
+      <div class="d-title">Lorem ipsum</div>
+      <div class="d-lead">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ac faucibus odio.</div>
+      <p>Vestibulum neque massa, scelerisque sit amet ligula eu, congue molestie mi. Praesent ut varius sem. Nullam at porttitor arcu, nec lacinia nisi. Ut ac dolor vitae odio interdum condimentum. <b>Vivamus dapibus sodales ex, vitae malesuada ipsum cursus convallis. Maecenas sed egestas nulla, ac condimentum orci.</b> Mauris diam felis, vulputate ac suscipit et, iaculis non est. Curabitur semper arcu ac ligula semper, nec luctus nisl blandit. Integer lacinia ante ac libero lobortis imperdiet. <i>Nullam mollis convallis ipsum, ac accumsan nunc vehicula vitae.</i> Nulla eget justo in felis tristique fringilla. Morbi sit amet tortor quis risus auctor condimentum. Morbi in ullamcorper elit. Nulla iaculis tellus sit amet mauris tempus fringilla.</p>
+      <p>Maecenas mauris lectus, lobortis et purus mattis, blandit dictum tellus.</p>
+      <ul>
+        <li><b>Maecenas non lorem quis tellus placerat varius.</b></li>
+        <li><i>Nulla facilisi.</i></li>
+        <li><u>Aenean congue fringilla justo ut aliquam.</u></li>
+        <li>Mauris id ex erat. Nunc vulputate neque vitae justo facilisis, non condimentum ante sagittis.</li>
+      </ul>
+    </div>`;
+
   function driveFileCardHtml(file) {
     const meta = DRV_FILE_TYPES[file.type] || DRV_FILE_TYPES.default;
     return `
       <div class="drv-card" data-drive-file="${file.id}">
-        <div class="drv-card-thumb" style="background:rgba(255,255,255,0.06);">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="${meta.color}" stroke-width="1.3">${meta.icon}</svg>
+        <div class="drv-card-thumb drv-file-thumb">
+          ${DRV_DOC_MOCK}
+          <svg class="drv-file-bigicon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="${meta.color}" stroke-width="1.3">${meta.icon}</svg>
           ${file.bookmarked ? `<span class="drv-bookmark"><svg width="16" height="16" viewBox="0 0 24 24">${DRV_ICONS.bookmark}</svg></span>` : ''}
         </div>
         <div class="drv-card-foot">
           <span class="drv-card-name">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${meta.color}" stroke-width="1.8" style="flex-shrink:0;">${meta.icon}</svg>
+            <svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0;"><path d="M4 1.5h5.5L13 5v9a.5.5 0 0 1-.5.5h-8.5A1.5 1.5 0 0 1 2.5 13V3A1.5 1.5 0 0 1 4 1.5z" fill="${meta.color}"/><path d="M5 8.2h6M5 10.2h6M5 12.2h4" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
             ${file.name}
           </span>
           <button class="drv-card-more" data-stub="1" aria-label="เพิ่มเติม">

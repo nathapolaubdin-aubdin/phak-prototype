@@ -2530,9 +2530,9 @@
     display: flex; align-items: center; justify-content: center; overflow: hidden;
   }
 
-/* Folder card = Figma "Glass" panel (fill #FFF @10%, radius 14.3, frost 7.15, light -45deg @80%).
+/* Folder + file cards = Figma "Glass" panel (fill #FFF @10%, radius 14.3, frost 7.15, light -45deg @80%).
    CSS can't do refraction/dispersion, so depth is approximated with inset edge highlights. */
-.drv-card[data-drive-folder] {
+.drv-card[data-drive-folder], .drv-card[data-drive-file] {
     border-radius: 14.3px; background: rgba(255,255,255,0.10);
     -webkit-backdrop-filter: blur(7.15px); backdrop-filter: blur(7.15px);
     box-shadow:
@@ -2544,7 +2544,28 @@
 
 .drv-card[data-drive-folder] .drv-card-foot { padding: 0 10px 4px; }
 
+.drv-card[data-drive-file] .drv-card-foot { padding: 0 6px 4px; }
+
+.drv-card[data-drive-file] .drv-card-name { gap: 6px; }
+
 .drv-folder-thumb { background: transparent; }
+
+.drv-file-thumb { background: #fff; align-items: flex-start; justify-content: flex-start; }
+
+.drv-file-thumb .drv-file-bigicon { display: none; }
+
+.drv-doc {
+    position: absolute; top: 12px; left: 12px; width: 340px; transform: scale(0.456); transform-origin: top left;
+    color: #111; font-family: "Times New Roman", Times, serif; pointer-events: none;
+  }
+
+.drv-doc .d-title { font-size: 26px; text-align: center; margin: 4px 0 18px; }
+
+.drv-doc .d-lead { font-size: 14px; font-weight: 700; line-height: 1.25; margin-bottom: 14px; }
+
+.drv-doc p { font-size: 10.5px; line-height: 1.3; margin: 0 0 10px; }
+
+.drv-doc ul { margin: 0; padding-left: 24px; font-size: 10.5px; line-height: 1.5; }
 
 .drv-folder-glyph { width: 104px; height: auto; }
 
@@ -2576,6 +2597,12 @@
 .drv-grid.is-list .drv-card-thumb { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 8px; }
 
 .drv-grid.is-list .drv-folder-glyph { width: 26px; }
+
+.drv-grid.is-list .drv-file-thumb { background: rgba(255,255,255,0.06); align-items: center; justify-content: center; }
+
+.drv-grid.is-list .drv-file-thumb .drv-doc { display: none; }
+
+.drv-grid.is-list .drv-file-thumb .drv-file-bigicon { display: block; }
 
 .drv-grid.is-list .drv-card-thumb svg { width: 22px; height: 22px; }
 
