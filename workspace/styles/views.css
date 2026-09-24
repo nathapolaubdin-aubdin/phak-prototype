@@ -2722,3 +2722,28 @@
 
 .drv-storage { color: var(--grey3); font-size: 12px; padding: 8px 0 0; }
 
+
+/* Drive "+ เพิ่ม" dropdown (Figma 510:144749) */
+.drv-addmenu {
+    position: fixed; z-index: 300; width: 318px; box-sizing: border-box; padding: 8px;
+    background: #282828; border-radius: 16px; box-shadow: 0 0 4px #000;
+    display: none; flex-direction: column; align-items: center; gap: 16px;
+  }
+
+.drv-addmenu.open { display: flex; }
+
+.drv-addmenu-group { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+
+.drv-addmenu-item {
+    display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 8px;
+    background: transparent; border: none; border-radius: 8px; color: #fff; font-family: inherit;
+    font-size: 12px; line-height: 1.3; text-align: left; white-space: nowrap; cursor: pointer;
+  }
+
+.drv-addmenu-item:hover { background: rgba(255,255,255,0.08); }
+
+.drv-addmenu-item img { width: 16px; height: 16px; flex-shrink: 0; }
+
+.drv-addmenu-item .hint { color: #808080; }
+
+.drv-addmenu-folder { border-radius: 16px; }

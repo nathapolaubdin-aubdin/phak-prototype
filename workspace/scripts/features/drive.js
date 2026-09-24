@@ -385,7 +385,7 @@
             <button class="drv-view-btn ${DRV_VIEW_MODE === 'list' ? 'active' : ''}" data-drive-view="list" aria-label="มุมมองลิสต์"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.list}</svg></button>
             <button class="drv-view-btn ${DRV_VIEW_MODE === 'grid' ? 'active' : ''}" data-drive-view="grid" aria-label="มุมมองกริด"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.grid}</svg></button>
           </div>
-          ${opts.readOnly ? '' : `<button class="drv-add-btn" ${opts.addFolder ? 'data-drive-add="folder"' : 'data-stub="1"'}>
+          ${opts.readOnly ? '' : `<button class="drv-add-btn" ${opts.addMenu ? `data-drive-add-menu="${opts.addMenu}"` : 'data-stub="1"'}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${DRV_ICONS.plusSm}</svg>
             เพิ่ม
           </button>`}
@@ -429,8 +429,9 @@
         if (fn) fn();
       });
     });
-    drivePage.querySelectorAll('[data-drive-add="folder"]').forEach(el => {
-      el.addEventListener('click', openNewFolderModal);
+    closeDriveAddMenu();
+    drivePage.querySelectorAll('[data-drive-add-menu]').forEach(el => {
+      el.addEventListener('click', (e) => { e.stopPropagation(); toggleDriveAddMenu(el); });
     });
     drivePage.querySelectorAll('[data-drive-view]').forEach(el => {
       el.addEventListener('click', () => {
@@ -534,7 +535,7 @@
     drivePage.innerHTML = driveShellHtml(`
       ${driveTopSearchHtml()}
       <div class="drv-listing">
-        ${driveToolbarHtml('ไดร์ของฉัน', DRV_PERSONAL_FOLDERS.length, { icon: DRV_ICONS.myDrive, addFolder: true })}
+        ${driveToolbarHtml('ไดร์ของฉัน', DRV_PERSONAL_FOLDERS.length, { icon: DRV_ICONS.myDrive, addMenu: 'root' })}
         <div class="drv-grid ${driveGridModeClass()}">
           ${DRV_PERSONAL_FOLDERS.map(f => driveFolderCardHtml(f)).join('')}
         </div>
@@ -561,7 +562,7 @@
     drivePage.innerHTML = driveShellHtml(`
       ${driveTopSearchHtml()}
       <div class="drv-listing">
-        ${driveToolbarHtml(folder.name, folder.files.length, { icon: DRV_ICONS.myDrive, crumbLabel: 'ไดร์ของฉัน', crumbKey: 'personal' })}
+        ${driveToolbarHtml(folder.name, folder.files.length, { icon: DRV_ICONS.myDrive, crumbLabel: 'ไดร์ของฉัน', crumbKey: 'personal', addMenu: 'folder' })}
         <div class="drv-grid ${driveGridModeClass()}">${folder.files.map(driveFileCardHtml).join('')}</div>
         ${!folder.files.length ? driveEmptyHtml('ยังไม่มีไฟล์ในโฟลเดอร์นี้') : ''}
       </div>
@@ -750,3 +751,57 @@
   document.getElementById('newFolderCancel').addEventListener('click', closeNewFolderModal);
   document.getElementById('newFolderConfirm').addEventListener('click', submitNewFolder);
   newFolderOverlay.addEventListener('mousedown', (e) => { if (e.target === newFolderOverlay) closeNewFolderModal(); });
+
+  // ----- เมนู "+ เพิ่ม" (Figma node 510:144749) -----
+  // Only "สร้างโฟลเดอร์ใหม่" is functional; the rest are prototype stubs.
+  const DRV_ADD_ITEMS = [
+    { icon: 'menu-upload', label: 'Upload Files or Photo' },
+    { icon: 'menu-link', label: 'ลิงก์เว็บ' },
+    { icon: 'menu-note', label: 'โน๊ต' },
+    { icon: 'menu-youtube', label: 'YouTube' },
+    { icon: 'menu-gdrive', label: 'Add from Google Drive' },
+    { icon: 'menu-research', label: 'Advance Research', hint: '(More Token)' },
+    { icon: 'menu-websearch', label: 'Web Search' }
+  ];
+
+  const driveAddMenu = document.createElement('div');
+  driveAddMenu.className = 'drv-addmenu';
+  document.body.appendChild(driveAddMenu);
+
+  function closeDriveAddMenu() { driveAddMenu.classList.remove('open'); }
+
+  // mode 'root' also offers folder creation; inside a folder it is omitted (no nested folders).
+  function toggleDriveAddMenu(btn) {
+    if (driveAddMenu.classList.contains('open')) { closeDriveAddMenu(); return; }
+    const canCreateFolder = btn.dataset.driveAddMenu === 'root';
+    driveAddMenu.innerHTML = `
+      <div class="drv-addmenu-group">${DRV_ADD_ITEMS.map(it => `
+        <button class="drv-addmenu-item" data-add-action="stub">
+          <img src="assets/icons/${it.icon}.svg" width="16" height="16" alt="">
+          <span>${it.label}</span>${it.hint ? `<span class="hint">${it.hint}</span>` : ''}
+        </button>`).join('')}
+      </div>
+      ${canCreateFolder ? `
+      <img src="assets/icons/menu-line.svg" width="160" height="1" alt="">
+      <button class="drv-addmenu-item drv-addmenu-folder" data-add-action="folder">
+        <img src="assets/icons/menu-folder.svg" width="16" height="16" alt="">
+        <span>สร้างโฟลเดอร์ใหม่</span>
+      </button>` : ''}`;
+    driveAddMenu.querySelectorAll('[data-add-action]').forEach(el => {
+      el.addEventListener('click', () => {
+        closeDriveAddMenu();
+        if (el.dataset.addAction === 'folder') openNewFolderModal();
+        else showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้');
+      });
+    });
+    const r = btn.getBoundingClientRect();
+    driveAddMenu.style.top = (r.bottom + 8) + 'px';
+    driveAddMenu.style.right = (window.innerWidth - r.right) + 'px';
+    driveAddMenu.classList.add('open');
+  }
+
+  document.addEventListener('mousedown', (e) => {
+    if (driveAddMenu.classList.contains('open') && !driveAddMenu.contains(e.target) && !e.target.closest('[data-drive-add-menu]')) closeDriveAddMenu();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDriveAddMenu(); });
+  window.addEventListener('resize', closeDriveAddMenu);
