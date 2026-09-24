@@ -2530,9 +2530,23 @@
     display: flex; align-items: center; justify-content: center; overflow: hidden;
   }
 
-.drv-folder-thumb { background: rgba(145,30,242,0.12); }
+/* Folder card = Figma "Glass" panel (fill #FFF @10%, radius 14.3, frost 7.15, light -45deg @80%).
+   CSS can't do refraction/dispersion, so depth is approximated with inset edge highlights. */
+.drv-card[data-drive-folder] {
+    border-radius: 14.3px; background: rgba(255,255,255,0.10);
+    -webkit-backdrop-filter: blur(7.15px); backdrop-filter: blur(7.15px);
+    box-shadow:
+      inset 0 0 0 0.5px rgba(255,255,255,0.10),
+      inset 2px 2px 4px -1px rgba(255,255,255,0.40),
+      inset -2px -2px 6px -2px rgba(255,255,255,0.14),
+      0 8px 24px rgba(0,0,0,0.25);
+  }
 
-.drv-folder-glyph { width: 72px; height: auto; }
+.drv-card[data-drive-folder] .drv-card-foot { padding: 0 10px 4px; }
+
+.drv-folder-thumb { background: transparent; }
+
+.drv-folder-glyph { width: 104px; height: auto; }
 
 .drv-bookmark {
     position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; color: var(--tag-urgent);
