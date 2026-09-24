@@ -170,7 +170,7 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.myDrive}</svg>
               <span class="label">ไดร์ของฉัน</span>
             </div>
-            <button class="icon-btn" style="width:16px;height:16px;" data-stub="1" aria-label="เพิ่ม" onclick="event.stopPropagation()">
+            <button class="icon-btn" style="width:16px;height:16px;" data-drive-add-folder="1" aria-label="สร้างโฟลเดอร์ใหม่" onclick="event.stopPropagation()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.plusSm}</svg>
             </button>
           </div>
@@ -260,6 +260,12 @@
     });
 
     driveSidebar.querySelector('[data-drive-nav="home"]').addEventListener('click', () => openDriveHome());
+    driveSidebar.querySelectorAll('[data-drive-add-folder]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openNewFolderModal();
+      });
+    });
     driveSidebar.querySelectorAll('[data-drive-personal-folder]').forEach(el => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -332,7 +338,7 @@
             <button class="drv-view-btn ${DRV_VIEW_MODE === 'list' ? 'active' : ''}" data-drive-view="list" aria-label="มุมมองลิสต์"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.list}</svg></button>
             <button class="drv-view-btn ${DRV_VIEW_MODE === 'grid' ? 'active' : ''}" data-drive-view="grid" aria-label="มุมมองกริด"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.grid}</svg></button>
           </div>
-          ${opts.readOnly ? '' : `<button class="drv-add-btn" data-stub="1">
+          ${opts.readOnly ? '' : `<button class="drv-add-btn" ${opts.addFolder ? 'data-drive-add="folder"' : 'data-stub="1"'}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${DRV_ICONS.plusSm}</svg>
             เพิ่ม
           </button>`}
@@ -375,6 +381,9 @@
         const fn = DRV_CRUMB_NAV[el.dataset.driveCrumb];
         if (fn) fn();
       });
+    });
+    drivePage.querySelectorAll('[data-drive-add="folder"]').forEach(el => {
+      el.addEventListener('click', openNewFolderModal);
     });
     drivePage.querySelectorAll('[data-drive-view]').forEach(el => {
       el.addEventListener('click', () => {
@@ -470,7 +479,7 @@
     drivePage.innerHTML = driveShellHtml(`
       ${driveTopSearchHtml()}
       <div class="drv-listing">
-        ${driveToolbarHtml('ไดร์ของฉัน', DRV_PERSONAL_FOLDERS.length, { icon: DRV_ICONS.myDrive })}
+        ${driveToolbarHtml('ไดร์ของฉัน', DRV_PERSONAL_FOLDERS.length, { icon: DRV_ICONS.myDrive, addFolder: true })}
         <div class="drv-grid ${driveGridModeClass()}">
           ${DRV_PERSONAL_FOLDERS.map(f => driveFolderCardHtml(f)).join('')}
         </div>
@@ -655,3 +664,34 @@
     renderDriveSidebar(DRV_LAST_ACTIVE);
     bindDriveShell();
   }
+
+  // ----- สร้างโฟลเดอร์ใหม่ (ไดร์ของฉัน) -----
+  const newFolderOverlay = document.getElementById('newFolderOverlay');
+  const newFolderInput = document.getElementById('newFolderInput');
+  const newFolderError = document.getElementById('newFolderError');
+
+  function openNewFolderModal() {
+    newFolderInput.value = '';
+    newFolderError.classList.remove('show');
+    newFolderOverlay.classList.add('open');
+    newFolderInput.focus();
+  }
+  function closeNewFolderModal() { newFolderOverlay.classList.remove('open'); }
+
+  function submitNewFolder() {
+    // Names are interpolated into innerHTML across Drive, so store them HTML-escaped.
+    const name = newFolderInput.value.trim().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    if (!name) { newFolderError.textContent = 'กรอกชื่อโฟลเดอร์ก่อนนะ'; newFolderError.classList.add('show'); return; }
+    if (DRV_PERSONAL_FOLDERS.some(f => f.name === name)) { newFolderError.textContent = 'มีโฟลเดอร์ชื่อนี้อยู่แล้ว'; newFolderError.classList.add('show'); return; }
+    DRV_PERSONAL_FOLDERS.push({ id: 'p-' + Date.now(), name, bookmarked: false, files: [] });
+    DRV_OPEN.personal = true;
+    closeNewFolderModal();
+    showToast('สร้างโฟลเดอร์ "' + newFolderInput.value.trim() + '" แล้ว');
+    openDrivePersonal();
+  }
+
+  newFolderInput.addEventListener('input', () => newFolderError.classList.remove('show'));
+  newFolderInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitNewFolder(); });
+  document.getElementById('newFolderCancel').addEventListener('click', closeNewFolderModal);
+  document.getElementById('newFolderConfirm').addEventListener('click', submitNewFolder);
+  newFolderOverlay.addEventListener('mousedown', (e) => { if (e.target === newFolderOverlay) closeNewFolderModal(); });
