@@ -40,6 +40,8 @@
     txt: { icon: DRV_ICONS.txt, color: 'var(--status-blue)' },
     pdf: { icon: DRV_ICONS.pdf, color: 'var(--accent-coral)' },
     docx: { icon: DRV_ICONS.txt, color: '#2B7BE4' },
+    xlsx: { icon: DRV_ICONS.txt, color: '#1E8E3E' },
+    pptx: { icon: DRV_ICONS.txt, color: '#E8710A' },
     image: { icon: DRV_ICONS.file, color: '#25A767' },
     default: { icon: DRV_ICONS.file, color: 'var(--grey4)' }
   };
@@ -48,7 +50,7 @@
     opts = opts || {};
     const ext = (name.split('.').pop() || '').toLowerCase();
     const type = ({ doc: 'docx', jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image' })[ext] || ext;
-    return { id, name, type, bookmarked: !!opts.bookmarked, date: opts.date || new Date(TODAY_REF), previewUrl: opts.previewUrl || null, note: opts.note || null };
+    return { id, name, type, bookmarked: !!opts.bookmarked, date: opts.date || new Date(TODAY_REF), previewUrl: opts.previewUrl || null, note: opts.note || null, linked: !!opts.linked };
   }
 
   let DRV_PERSONAL_FILES = [
@@ -177,7 +179,7 @@
         <div class="drv-card-foot">
           <span class="drv-card-name">
             <svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0;"><path d="M4 1.5h5.5L13 5v9a.5.5 0 0 1-.5.5h-8.5A1.5 1.5 0 0 1 2.5 13V3A1.5 1.5 0 0 1 4 1.5z" fill="${meta.color}"/><path d="M5 8.2h6M5 10.2h6M5 12.2h4" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
-            ${file.name}
+            ${file.linked ? '<img src="assets/icons/menu-gdrive.svg" width="12" height="12" alt="" title="เชื่อมโยงจาก Google Drive" style="flex-shrink:0;">' : ''}${file.name}
           </span>
           <button class="drv-card-more" data-stub="1" aria-label="เพิ่มเติม">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.more}</svg>
@@ -771,7 +773,7 @@
     { icon: 'menu-link', label: 'ลิงก์เว็บ', action: 'link' },
     { icon: 'menu-note', label: 'โน๊ต', action: 'note' },
     { icon: 'menu-youtube', label: 'YouTube', action: 'youtube' },
-    { icon: 'menu-gdrive', label: 'Add from Google Drive' },
+    { icon: 'menu-gdrive', label: 'Add from Google Drive', action: 'gdrive' },
     { icon: 'menu-research', label: 'Advance Research', hint: '(More Token)' },
     { icon: 'menu-websearch', label: 'Web Search' }
   ];
@@ -806,6 +808,7 @@
         if (act === 'folder') openNewFolderModal();
         else if (act === 'upload') driveUploadInput.click();
         else if (act === 'link' || act === 'youtube' || act === 'note') openDriveAddModal(act);
+        else if (act === 'gdrive') openGoogleDriveModal();
         else showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้');
       });
     });
@@ -998,3 +1001,220 @@
 
   driveAddOverlay.addEventListener('mousedown', (e) => { if (e.target === driveAddOverlay && !driveAddBusy) closeDriveAddModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && driveAddOverlay.classList.contains('open') && !driveAddBusy) closeDriveAddModal(); });
+
+  // ----- Add from Google Drive (Figma 510:144943 = Google Picker "Open files") -----
+  // Mock Google Drive: pick files across tabs (or upload into Drive via the Upload tab),
+  // then choose to import a copy (default) or keep a live link.
+  const DRV_GD_TABS = ['My Drive', 'Shared with Me', 'Starred', 'Recent', 'Upload'];
+  const gd = (id, name, kind, owner, modified, extra) => Object.assign({ id, name, kind, owner, modified }, extra || {});
+  const DRV_GD_FOLDERS = [
+    gd('gd-f1', 'งานลูกค้า', 'folder', 'me', 'Aug 6, 2026', { children: [
+      gd('gd-f1-1', 'ข้อเสนอโครงการ Thai IOD', 'doc', 'me', 'Aug 5, 2026'),
+      gd('gd-f1-2', 'สัญญาบริการ.pdf', 'pdf', 'me', 'Jul 30, 2026'),
+      gd('gd-f1-3', 'ตารางเวลาโครงการ', 'sheet', 'me', 'Jul 28, 2026')
+    ] }),
+    gd('gd-f2', 'บันทึกประชุม', 'folder', 'me', 'Aug 10, 2026', { children: [
+      gd('gd-f2-1', 'ประชุมทีม 10 ส.ค.', 'doc', 'me', 'Aug 10, 2026'),
+      gd('gd-f2-2', 'ประชุมลูกค้า Prolog', 'doc', 'me', 'Aug 3, 2026')
+    ] })
+  ];
+  const DRV_GD_MYDRIVE = DRV_GD_FOLDERS.concat([
+    gd('gd-1', 'แผนการตลาด Q3', 'doc', 'me', 'Aug 9, 2026', { starred: true }),
+    gd('gd-2', 'งบประมาณ 2569', 'sheet', 'me', 'Aug 8, 2026'),
+    gd('gd-3', 'Company Profile 2026', 'slide', 'me', 'Aug 1, 2026'),
+    gd('gd-4', 'คู่มือพนักงาน.pdf', 'pdf', 'me', 'Jul 20, 2026', { starred: true }),
+    gd('gd-5', 'โลโก้บริษัท.png', 'image', 'me', 'Jun 15, 2026')
+  ]);
+  const DRV_GD_SHARED = [
+    gd('gd-s1', 'นโยบายความปลอดภัยข้อมูล', 'doc', 'ฝ่าย IT', 'Aug 7, 2026'),
+    gd('gd-s2', 'รายชื่อผู้ติดต่อ', 'sheet', 'ฝ่ายขาย', 'Aug 2, 2026'),
+    gd('gd-s3', 'Roadmap ผลิตภัณฑ์', 'slide', 'ฝ่ายผลิตภัณฑ์', 'Jul 25, 2026')
+  ];
+  const gdAll = () => {
+    const flat = [];
+    (function walk(list) { list.forEach(i => { flat.push(i); if (i.children) walk(i.children); }); })(DRV_GD_MYDRIVE.concat(DRV_GD_SHARED));
+    return flat;
+  };
+
+  const GD_KIND = {
+    folder: { color: '#5f6368', ext: '' },
+    doc: { color: '#4285f4', ext: '.docx' },
+    sheet: { color: '#0f9d58', ext: '.xlsx' },
+    slide: { color: '#f4b400', ext: '.pptx' },
+    pdf: { color: '#ea4335', ext: '' },
+    image: { color: '#d93025', ext: '' },
+    file: { color: '#5f6368', ext: '' }
+  };
+  function gdIconHtml(kind) {
+    const c = GD_KIND[kind].color;
+    if (kind === 'folder') return `<svg width="20" height="20" viewBox="0 0 24 24" fill="${c}"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg>`;
+    return `<svg width="20" height="20" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2.5" fill="${c}"/><path d="M8 9h8M8 13h8M8 17h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+  }
+  const gdFileName = (it) => it.name + GD_KIND[it.kind].ext;
+
+  const driveGdOverlay = document.createElement('div');
+  driveGdOverlay.className = 'drv-modal-overlay';
+  document.body.appendChild(driveGdOverlay);
+  const gdUploadInput = document.createElement('input');
+  gdUploadInput.type = 'file'; gdUploadInput.multiple = true; gdUploadInput.style.display = 'none';
+  document.body.appendChild(gdUploadInput);
+
+  let gdTab = 'My Drive';
+  let gdFolder = null;
+  let gdSel = new Set();
+  let gdBusy = false;
+  let gdTimer = null;
+  let gdUploadSeq = 0;
+
+  function closeGoogleDriveModal() {
+    clearInterval(gdTimer);
+    gdBusy = false;
+    driveGdOverlay.classList.remove('open');
+    driveGdOverlay.innerHTML = '';
+  }
+
+  function openGoogleDriveModal() {
+    gdTab = 'My Drive'; gdFolder = null; gdSel = new Set();
+    driveGdOverlay.classList.add('open');
+    gdRenderPicker();
+  }
+
+  function gdTabItems() {
+    if (gdTab === 'My Drive') return gdFolder ? gdFolder.children : DRV_GD_MYDRIVE;
+    if (gdTab === 'Shared with Me') return DRV_GD_SHARED;
+    if (gdTab === 'Starred') return gdAll().filter(i => i.starred);
+    return gdAll().filter(i => i.kind !== 'folder').sort((a, b) => new Date(b.modified) - new Date(a.modified)).slice(0, 6);
+  }
+
+  function gdRenderPicker() {
+    const items = gdTab === 'Upload' ? [] : gdTabItems();
+    const body = gdTab === 'Upload' ? `
+      <div class="drv-gp-drop" id="gdDrop">
+        <div class="drv-gp-drop-title">Drag a file here</div>
+        <div class="drv-gp-drop-sub">Or, if you prefer...</div>
+        <button class="drv-gp-btn primary" id="gdPickDevice">Select a file from your device</button>
+      </div>` : `
+      ${gdTab === 'My Drive' && gdFolder ? `<div class="drv-gp-crumb"><span data-gp-up>My Drive</span><span class="sep">›</span><b>${driveEsc(gdFolder.name)}</b></div>` : ''}
+      <div class="drv-gp-list">
+        <div class="drv-gp-row head"><span></span><span>Name</span><span>Owner</span><span>Last modified</span></div>
+        ${items.length ? items.map(i => `
+        <div class="drv-gp-row ${gdSel.has(i.id) ? 'sel' : ''}" data-gp-item="${i.id}">
+          <span class="chk">${i.kind === 'folder' ? '' : `<span class="box">${gdSel.has(i.id) ? '✓' : ''}</span>`}</span>
+          <span class="nm">${gdIconHtml(i.kind)}<span>${driveEsc(i.name)}</span></span>
+          <span class="mut">${driveEsc(i.owner)}</span>
+          <span class="mut">${driveEsc(i.modified)}</span>
+        </div>`).join('') : '<div class="drv-gp-empty">No files here</div>'}
+      </div>`;
+    driveGdOverlay.innerHTML = `
+      <div class="drv-gp" role="dialog" aria-label="Open files">
+        <div class="drv-gp-head">
+          <div class="drv-gp-title">Open files</div>
+          <div class="drv-gp-tabs">${DRV_GD_TABS.map(t => `<button class="drv-gp-tab ${t === gdTab ? 'active' : ''}" data-gp-tab="${t}">${t}</button>`).join('')}</div>
+        </div>
+        <div class="drv-gp-body">${body}</div>
+        <div class="drv-gp-foot">
+          <button class="drv-gp-btn primary" id="gdOpen" ${gdSel.size ? '' : 'disabled'}>Open</button>
+          <button class="drv-gp-btn" id="gdCancel">Cancel</button>
+        </div>
+      </div>`;
+
+    driveGdOverlay.querySelectorAll('[data-gp-tab]').forEach(b => b.addEventListener('click', () => {
+      gdTab = b.dataset.gpTab; gdFolder = null; gdRenderPicker();
+    }));
+    const up = driveGdOverlay.querySelector('[data-gp-up]');
+    if (up) up.addEventListener('click', () => { gdFolder = null; gdRenderPicker(); });
+    driveGdOverlay.querySelectorAll('[data-gp-item]').forEach(row => row.addEventListener('click', () => {
+      const it = gdAll().find(x => x.id === row.dataset.gpItem);
+      if (!it) return;
+      if (it.kind === 'folder') { gdFolder = it; gdRenderPicker(); return; }
+      if (gdSel.has(it.id)) gdSel.delete(it.id); else gdSel.add(it.id);
+      gdRenderPicker();
+    }));
+    document.getElementById('gdCancel').addEventListener('click', closeGoogleDriveModal);
+    document.getElementById('gdOpen').addEventListener('click', gdRenderConfirm);
+    if (gdTab === 'Upload') {
+      document.getElementById('gdPickDevice').addEventListener('click', () => gdUploadInput.click());
+      const drop = document.getElementById('gdDrop');
+      drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+      drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+      drop.addEventListener('drop', (e) => { e.preventDefault(); gdHandleUpload(Array.from(e.dataTransfer.files || [])); });
+    }
+  }
+
+  // Uploading here puts the file into (mock) Google Drive, selected and ready to open.
+  function gdHandleUpload(files) {
+    if (!files.length) return;
+    files.forEach(f => {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      const kind = /^image\//.test(f.type) ? 'image' : ext === 'pdf' ? 'pdf' : 'file';
+      const it = gd('gd-up-' + Date.now() + '-' + (++gdUploadSeq), f.name, kind, 'me', 'Just now', { file: f });
+      DRV_GD_MYDRIVE.unshift(it);
+      gdSel.add(it.id);
+    });
+    gdTab = 'My Drive'; gdFolder = null;
+    gdRenderPicker();
+  }
+  gdUploadInput.addEventListener('change', () => { gdHandleUpload(Array.from(gdUploadInput.files || [])); gdUploadInput.value = ''; });
+
+  // Step 2: import a copy (default, recommended) or keep a live link.
+  function gdRenderConfirm() {
+    const items = gdAll().filter(i => gdSel.has(i.id));
+    if (!items.length) return;
+    const chips = items.slice(0, 3).map(i => `<span class="drv-gd-chip">${gdIconHtml(i.kind)}<span>${driveEsc(gdFileName(i))}</span></span>`).join('')
+      + (items.length > 3 ? `<span class="drv-gd-more">+${items.length - 3} ไฟล์</span>` : '');
+    driveGdOverlay.innerHTML = `
+      <div class="drv-modal" role="dialog" aria-label="Add from Google Drive">
+        <div class="drv-modal-head"><img src="assets/icons/menu-gdrive.svg" width="16" height="16" alt=""><span>Add from Google Drive</span></div>
+        <div class="drv-modal-body">
+          <div class="drv-gd-chips">${chips}</div>
+          <label class="drv-gd-opt"><input type="radio" name="gdMode" value="copy" checked>
+            <span><b>นำเข้าสำเนา <em>แนะนำ</em></b><small>คัดลอกไฟล์เข้าไดร์ของฉัน AI อ่านเนื้อหาได้เสถียร แต่จะไม่อัปเดตตามต้นฉบับ</small></span></label>
+          <label class="drv-gd-opt"><input type="radio" name="gdMode" value="link">
+            <span><b>เชื่อมโยงไฟล์</b><small>คงไฟล์ไว้ใน Google Drive และอัปเดตตามต้นฉบับ แต่ต้องมีสิทธิ์เข้าถึงตลอด</small></span></label>
+        </div>
+        <div class="drv-modal-actions">
+          <button class="drv-modal-cancel" id="gdConfirmCancel">ยกเลิก</button>
+          <button class="drv-modal-ok" id="gdConfirmOk">ตกลง</button>
+        </div>
+      </div>`;
+    document.getElementById('gdConfirmCancel').addEventListener('click', closeGoogleDriveModal);
+    document.getElementById('gdConfirmOk').addEventListener('click', () => {
+      const mode = driveGdOverlay.querySelector('input[name="gdMode"]:checked').value;
+      gdImport(items, mode);
+    });
+  }
+
+  function gdImport(items, mode) {
+    gdBusy = true;
+    const isLink = mode === 'link';
+    const modal = driveGdOverlay.querySelector('.drv-modal');
+    modal.querySelector('.drv-modal-body').innerHTML = `
+      <div class="drv-progress">
+        <div class="drv-spinner"></div>
+        <div class="drv-progress-text">${isLink ? 'กำลังเชื่อมโยงไฟล์จาก Google Drive' : 'กำลังนำเข้าไฟล์จาก Google Drive'}<span class="drv-dots"></span></div>
+        <div class="drv-progress-sub">${items.length} ไฟล์</div>
+        <div class="drv-progress-track"><div class="drv-progress-fill" id="gdProgressFill"></div></div>
+      </div>`;
+    modal.querySelector('.drv-modal-actions').style.display = 'none';
+    const fill = document.getElementById('gdProgressFill');
+    let pct = 0;
+    gdTimer = setInterval(() => {
+      pct += 3;
+      fill.style.width = Math.min(pct, 100) + '%';
+      if (pct < 100) return;
+      clearInterval(gdTimer);
+      setTimeout(() => {
+        if (!gdBusy) return;
+        items.forEach(i => driveAddFile(driveEsc(gdFileName(i)), {
+          linked: isLink,
+          previewUrl: i.file && i.kind === 'image' ? URL.createObjectURL(i.file) : null
+        }));
+        closeGoogleDriveModal();
+        driveRefreshKeepScroll();
+        showToast((isLink ? 'เชื่อมโยง ' : 'นำเข้า ') + items.length + ' ไฟล์จาก Google Drive แล้ว');
+      }, 250);
+    }, 50);
+  }
+
+  driveGdOverlay.addEventListener('mousedown', (e) => { if (e.target === driveGdOverlay && !gdBusy) closeGoogleDriveModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && driveGdOverlay.classList.contains('open') && !gdBusy) closeGoogleDriveModal(); });
