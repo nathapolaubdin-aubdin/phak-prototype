@@ -3455,3 +3455,9 @@
 .drv-link-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -12px; }
 
 .drv-link-row .lbl { font-size: 12px; color: #808080; margin-right: 4px; }
+
+.dash-card-title.link { cursor: pointer; }
+
+.dash-card-title.link:hover { text-decoration: underline; }
+
+.drive-row[data-dash-drive] { cursor: pointer; }

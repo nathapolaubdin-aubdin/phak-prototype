@@ -310,19 +310,19 @@
               ${dashNotifHtml(project)}
             </div>
             <div class="dash-card" style="flex:1; min-height: 328px;">
-              <div class="dash-card-header"><span class="dash-card-title">ไดร์</span></div>
-              <div class="drive-row" data-stub="1">
+              <div class="dash-card-header"><span class="dash-card-title link" id="dashDriveTitle" role="link" tabindex="0" title="ไปที่หน้า Drive">ไดร์</span></div>
+              <div class="drive-row" data-dash-drive="root" role="link" tabindex="0">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="9 12 11 14 15 10"/></svg>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 <span style="flex:1;">ไดร์งาน</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               </div>
-              <div class="drive-row" data-stub="1" style="padding-left:24px; opacity:0.85;">
+              <div class="drive-row" data-dash-drive="folder" role="link" tabindex="0" style="padding-left:24px; opacity:0.85;">
                 <span style="width:12px;"></span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="9 12 11 14 15 10"/></svg>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                <span style="flex:1;">${project.folderName}</span>
+                <span style="flex:1;">${(() => { const lf = DRV_WORK_FOLDERS.find(f => f.id === project.workFolderId); return lf ? lf.name : project.folderName; })()}</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               </div>
             </div>
@@ -330,7 +330,7 @@
 
           <div class="dash-card" style="flex: 2; min-height: 680px; display:flex; flex-direction:column;">
             <div style="flex:1;">${memberRows}</div>
-            <button class="btn-secondary" data-stub="1" style="align-self:center; border:0.5px solid rgba(255,255,255,0.2); margin-top:8px;">จัดการ</button>
+            <button class="btn-secondary" id="dashManageMembers" style="align-self:center; border:0.5px solid rgba(255,255,255,0.2); margin-top:8px;">จัดการ</button>
           </div>
         </div>
       </div>
@@ -338,6 +338,24 @@
 
     bindPageHeader(project);
     renderDashDayCard(project);
+
+    // "ไดร์" card jumps to the Drive page: heading / ไดร์งาน row -> ไดร์งาน, project row -> its linked folder.
+    const goDriveRoot = () => openDriveWork();
+    const goDriveFolder = () => {
+      const f = DRV_WORK_FOLDERS.find(x => x.id === project.workFolderId);
+      if (f) openDriveWorkFolder(f); else openDriveWork();
+    };
+    const bindGo = (el, fn) => {
+      el.addEventListener('click', fn);
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
+    };
+    bindGo(document.getElementById('dashDriveTitle'), goDriveRoot);
+    dashboardPage.querySelectorAll('[data-dash-drive]').forEach(row => bindGo(row, row.dataset.dashDrive === 'folder' ? goDriveFolder : goDriveRoot));
+
+    // "จัดการ" opens the same member manager as the project settings menu.
+    const manageBtn = document.getElementById('dashManageMembers');
+    manageBtn.addEventListener('click', () => openMemberManager(project, { returnFocusTo: manageBtn }));
+
     dashboardPage.querySelectorAll('.dash-notif-row').forEach(row => {
       row.addEventListener('click', () => {
         const t = (project.tasks || []).find(x => x.key === row.dataset.notifKey);
