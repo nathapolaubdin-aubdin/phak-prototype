@@ -1,0 +1,3 @@
+# Netlify / Cloudflare Pages style static hosting: publish the workspace folder, no build step.
+[build]
+  publish = "workspace"
