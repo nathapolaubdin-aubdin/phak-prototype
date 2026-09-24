@@ -164,7 +164,7 @@
         </button>
 
         <div class="drv-nav-group">
-          <div class="drv-nav-header" data-drive-toggle="personal">
+          <div class="drv-nav-header ${active.section === 'personal' && !active.folderId ? 'active' : ''}" data-drive-toggle="personal">
             <div class="left">
               <svg class="drv-nav-chev ${DRV_OPEN.personal ? 'open' : ''}" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">${DRV_ICONS.chevDown}</svg>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.myDrive}</svg>
@@ -174,10 +174,11 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.plusSm}</svg>
             </button>
           </div>
-          ${DRV_OPEN.personal ? `<div class="drv-nav-sub ${active.section === 'personal' ? 'active' : ''}" data-drive-nav="personal">
-              <span class="drv-nav-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.folder}</svg></span>
-              <span class="label">ส่วนตัว</span>
-            </div>` : ''}
+          ${DRV_OPEN.personal ? `<div class="drv-nav-subs">${DRV_PERSONAL_FOLDERS.map(f => `
+              <div class="drv-nav-sub ${active.section === 'personal' && active.folderId === f.id ? 'active' : ''}" data-drive-personal-folder="${f.id}">
+                <span class="drv-nav-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.folder}</svg></span>
+                <span class="label">${f.name}</span>
+              </div>`).join('')}</div>` : ''}
         </div>
 
         <div class="drv-nav-group">
@@ -259,8 +260,13 @@
     });
 
     driveSidebar.querySelector('[data-drive-nav="home"]').addEventListener('click', () => openDriveHome());
-    const personalRow = driveSidebar.querySelector('[data-drive-nav="personal"]');
-    if (personalRow) personalRow.addEventListener('click', () => openDrivePersonal());
+    driveSidebar.querySelectorAll('[data-drive-personal-folder]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const f = DRV_PERSONAL_FOLDERS.find(x => x.id === el.dataset.drivePersonalFolder);
+        if (f) openDrivePersonalFolder(f);
+      });
+    });
     driveSidebar.querySelectorAll('[data-drive-project]').forEach(el => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
