@@ -3420,3 +3420,11 @@
 .mm-node.branch { padding: 6px 14px; background: #282828; border: 1px solid #911ef2; font-size: 13px; }
 
 .mm-node.kid { padding: 4px 10px; background: #1e1e1e; border: 1px solid #3a3a3a; color: #d0d0d0; font-size: 12px; }
+
+/* AI chat panel open beside Workspace/Drive = same context as the page search bars, so hide them */
+.app.ai-chat-open #workspacePage .prompt-wrap,
+.app.ai-chat-open #dashboardPage .prompt-wrap,
+.app.ai-chat-open #drivePage .drv-topsearch,
+.app.ai-chat-open #drivePage .drv-hero { display: none; }
+
+.app.ai-chat-open #drivePage .drv-sections { margin-top: 24px; }

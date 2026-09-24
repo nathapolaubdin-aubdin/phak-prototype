@@ -28,7 +28,7 @@
     mindmap: { label: 'Mind Map', ext: 'MM', file: 'mm', icon: 'art-mindmap', w: 48, h: 50 }
   };
 
-  const S = window.ChatStore = { chats: [], artifacts: [], activeId: null, blankMode: 'web', blankTool: null, viewArtifactId: null, MODES, GREETING, STEPS, TYPES, NEW_TITLE };
+  const S = window.ChatStore = { chats: [], artifacts: [], activeId: null, blankMode: 'web', blankTool: null, viewArtifactId: null, holdNext: false, MODES, GREETING, STEPS, TYPES, NEW_TITLE };
   const listeners = [];
   let cseq = 0, aseq = 0;
 
@@ -526,7 +526,7 @@
     const qi = document.getElementById('amQ');
     if (qi) qi.addEventListener('input', () => { amState.q = qi.value; const pos = qi.selectionStart; renderAm(); const n = document.getElementById('amQ'); n.focus(); n.setSelectionRange(pos, pos); });
     document.getElementById('amSort').addEventListener('click', () => { amState.asc = !amState.asc; renderAm(); });
-    document.getElementById('amNew').addEventListener('click', () => { closeAm(); S.newBlank(); if (!isVisible('chatbotPage')) openChatbotPage(); });
+    document.getElementById('amNew').addEventListener('click', () => { closeAm(); S.newBlank(); if (!isVisible('chatbotPage')) { S.holdNext = true; openChatbotPage(); } });
     am.querySelectorAll('[data-am-chat]').forEach(b => b.addEventListener('click', () => { closeAm(); S.open(b.dataset.amChat); if (!isVisible('chatbotPage')) openChatbotPage(); }));
     am.querySelectorAll('[data-am-art]').forEach(b => b.addEventListener('click', () => { closeAm(); U.openViewer(b.dataset.amArt); }));
   }

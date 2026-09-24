@@ -11,6 +11,26 @@
 
   let isOpen = false;
   let view = 'chat'; // 'chat' | 'artifact' (artifact only used off the Chatbot page)
+  let pendingDraft = ''; // text typed in a search bar that should land in the panel's input
+
+  // Top-level page: the search bars only exist on 'workspace' and 'drive'.
+  const vis = (id) => { const el = document.getElementById(id); return !!el && el.style.display !== 'none'; };
+  const topPage = () => vis('chatbotPage') ? 'chatbot' : vis('drivePage') ? 'drive' : 'workspace';
+  let lastTop = 'workspace';
+
+  // While the chat is open beside Drive/Workspace it IS the search, so those page search bars hide (CSS keys off ai-chat-open).
+  function applyState() {
+    app.classList.toggle('ai-open', isOpen);
+    app.classList.toggle('ai-chat-open', isOpen && topPage() !== 'chatbot');
+  }
+
+  // Anything already typed into a visible search bar moves into the panel instead of being lost.
+  function takeBarDraft() {
+    const inputs = document.querySelectorAll('#workspacePage .prompt-input, #dashboardPage .prompt-input, #drivePage .prompt-input');
+    for (const i of inputs) {
+      if (i.offsetParent !== null && i.value.trim()) { pendingDraft = i.value; i.value = ''; return; }
+    }
+  }
 
   // ----- DOM -----
   const toggle = document.createElement('button');
@@ -25,8 +45,9 @@
   app.appendChild(dock);
 
   function setOpen(v) {
+    if (v && !isOpen) takeBarDraft();
     isOpen = v;
-    app.classList.toggle('ai-open', v);
+    applyState();
     if (v) render();
   }
 
@@ -92,7 +113,8 @@
     if (!isOpen) return;
     const onChat = U.isVisible('chatbotPage');
     const prevInput = document.getElementById('aiInput');
-    const draft = prevInput ? prevInput.value : '';
+    const draft = pendingDraft || (prevInput ? prevInput.value : '');
+    pendingDraft = '';
     dock.innerHTML = onChat ? resultHtml() : (view === 'artifact' ? artifactHtml() : chatHtml());
     document.getElementById('aiClose').addEventListener('click', () => setOpen(false));
     if (onChat || view === 'artifact') {
@@ -105,7 +127,7 @@
   }
 
   function bindChat(draft) {
-    document.getElementById('aiExpand').addEventListener('click', () => { setOpen(false); openChatbotPage(); });
+    document.getElementById('aiExpand').addEventListener('click', () => { S.holdNext = true; setOpen(false); openChatbotPage(); });
     dock.querySelectorAll('[data-stub-ai]').forEach(el => el.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้')));
 
     const input = document.getElementById('aiInput');
@@ -162,19 +184,60 @@
   window.openAiPanel = function (mode) {
     view = 'chat';
     if (mode && S.MODES[mode]) S.setMode(mode);
-    if (!isOpen) { isOpen = true; app.classList.add('ai-open'); }
+    if (!isOpen) { takeBarDraft(); isOpen = true; applyState(); }
     render();
     const inp = document.getElementById('aiInput');
     if (inp) inp.focus();
   };
 
+  // ----- search bars on Workspace / Project / Drive send into this chat -----
+  function sendFromBar(text) {
+    const c = S.active();
+    view = 'chat';
+    if (!isOpen) { isOpen = true; applyState(); }
+    if (c && c.busy) {
+      pendingDraft = text;
+      render();
+      showToast('AI กำลังตอบอยู่ — ส่งต่อได้เมื่อตอบเสร็จ');
+      return;
+    }
+    S.send(text); // continues the active chat (or starts one) and re-renders the panel
+    const inp = document.getElementById('aiInput');
+    if (inp) inp.focus();
+  }
+
+  const inPageBar = (el) => {
+    const bar = el && el.closest && el.closest('.prompt-bar');
+    return bar && bar.closest('#workspacePage, #dashboardPage, #drivePage') ? bar : null;
+  };
+  const submitBar = (bar) => {
+    const inp = bar.querySelector('.prompt-input');
+    const t = inp.value.trim();
+    if (!t) { inp.focus(); return; }
+    inp.value = '';
+    sendFromBar(t);
+  };
+  // Capture phase so the old placeholder handlers (toast / fill-only chips) never run.
+  document.addEventListener('click', (e) => {
+    const bar = inPageBar(e.target);
+    if (!bar) return;
+    const chip = e.target.closest('.chip');
+    if (chip) { e.stopPropagation(); sendFromBar((chip.dataset.fill || chip.textContent).trim()); return; }
+    if (e.target.closest('.send-btn')) { e.stopPropagation(); submitBar(bar); }
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.isComposing || e.shiftKey) return;
+    const bar = e.target.classList && e.target.classList.contains('prompt-input') ? inPageBar(e.target) : null;
+    if (bar) { e.stopPropagation(); e.preventDefault(); submitBar(bar); }
+  }, true);
+
   // ----- store events -----
   S.subscribe((evt) => {
     const onChat = U.isVisible('chatbotPage');
-    if (evt === 'artifact' && onChat && !isOpen) { isOpen = true; app.classList.add('ai-open'); }
+    if (evt === 'artifact' && onChat && !isOpen) { isOpen = true; applyState(); }
     if (evt === 'open-artifact') {
       if (!onChat) view = 'artifact';
-      if (!isOpen) { isOpen = true; app.classList.add('ai-open'); }
+      if (!isOpen) { isOpen = true; applyState(); }
     }
     if (evt === 'active') view = 'chat';
     render();
@@ -182,7 +245,22 @@
 
   toggle.addEventListener('click', () => setOpen(true));
 
-  // Page changes swap the panel's content (chat <-> result), so re-render.
-  const chatPage = document.getElementById('chatbotPage');
-  if (chatPage) new MutationObserver(() => { view = 'chat'; if (isOpen) render(); }).observe(chatPage, { attributes: true, attributeFilter: ['style'] });
+  // Changing top-level page (Chatbot / Workspace / Drive) starts a fresh chat (the old one stays in history),
+  // and the panel closes when leaving or entering the Chatbot page, where its role differs (Result vs chat).
+  const pageObserver = new MutationObserver(() => {
+    const now = topPage();
+    if (now !== lastTop) {
+      const from = lastTop;
+      lastTop = now;
+      if (S.holdNext) S.holdNext = false; else S.newBlank();
+      if (isOpen && (from === 'chatbot' || now === 'chatbot')) isOpen = false;
+      view = 'chat';
+    }
+    applyState();
+    if (isOpen) render();
+  });
+  ['workspacePage', 'dashboardPage', 'chatbotPage', 'drivePage'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) pageObserver.observe(el, { attributes: true, attributeFilter: ['style'] });
+  });
 })();
