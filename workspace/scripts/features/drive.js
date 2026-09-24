@@ -50,7 +50,7 @@
     opts = opts || {};
     const ext = (name.split('.').pop() || '').toLowerCase();
     const type = ({ doc: 'docx', jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image' })[ext] || ext;
-    return { id, name, type, bookmarked: !!opts.bookmarked, date: opts.date || new Date(TODAY_REF), previewUrl: opts.previewUrl || null, note: opts.note || null, linked: !!opts.linked };
+    return { id, name, type, bookmarked: !!opts.bookmarked, date: opts.date || new Date(TODAY_REF), previewUrl: opts.previewUrl || null, note: opts.note || null, linked: !!opts.linked, ai: !!opts.ai };
   }
 
   let DRV_PERSONAL_FILES = [
@@ -179,7 +179,7 @@
         <div class="drv-card-foot">
           <span class="drv-card-name">
             <svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0;"><path d="M4 1.5h5.5L13 5v9a.5.5 0 0 1-.5.5h-8.5A1.5 1.5 0 0 1 2.5 13V3A1.5 1.5 0 0 1 4 1.5z" fill="${meta.color}"/><path d="M5 8.2h6M5 10.2h6M5 12.2h4" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
-            ${file.linked ? '<img src="assets/icons/menu-gdrive.svg" width="12" height="12" alt="" title="เชื่อมโยงจาก Google Drive" style="flex-shrink:0;">' : ''}${file.name}
+            ${file.linked ? '<img src="assets/icons/menu-gdrive.svg" width="12" height="12" alt="" title="เชื่อมโยงจาก Google Drive" style="flex-shrink:0;">' : ''}${file.ai ? '<span class="drv-ai-badge" title="สร้างโดย AI จากแชท">AI</span>' : ''}${file.name}
           </span>
           <button class="drv-card-more" data-stub="1" aria-label="เพิ่มเติม">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${DRV_ICONS.more}</svg>
@@ -1221,3 +1221,25 @@
 
   driveGdOverlay.addEventListener('mousedown', (e) => { if (e.target === driveGdOverlay && !gdBusy) closeGoogleDriveModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && driveGdOverlay.classList.contains('open') && !gdBusy) closeGoogleDriveModal(); });
+
+  // Turn an AI draft (see chat-store.js) into a real Drive file at `dest`.
+  // dest: { type: 'root' } | { type: 'folder', id } | { type: 'project', key }
+  function driveSaveArtifact(art, dest) {
+    let files, label;
+    if (dest.type === 'folder') {
+      const f = DRV_PERSONAL_FOLDERS.find(x => x.id === dest.id);
+      files = f.files; label = 'ไดร์ของฉัน / ' + f.name;
+    } else if (dest.type === 'project') {
+      const p = ALL_PROJECTS.find(x => x.keyPrefix === dest.key);
+      files = ensureProjectDriveFiles(p); label = 'ไดร์งาน / ' + p.name;
+    } else {
+      files = DRV_PERSONAL_ROOT_FILES; label = 'ไดร์ของฉัน';
+    }
+    const file = driveFile('ai-' + art.id + '-' + Date.now(), driveEsc(art.name), {
+      note: { title: driveEsc(art.title), body: driveEsc(art.body).replace(/\n/g, '<br>') },
+      date: new Date(new Date(TODAY_REF).getTime() + 1000 * (++DRV_ADD_SEQ)),
+      ai: true
+    });
+    files.unshift(file);
+    return { label, fileId: file.id };
+  }

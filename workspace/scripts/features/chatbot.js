@@ -24,34 +24,8 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           New Chat
         </button>
-        <div style="display:flex; flex-direction:column; gap:16px; width:100%;">
-          <div class="chat-recents-head">
-            <span>Favorite</span>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
-            ${CHAT_FAVORITES.map(t => `
-              <button class="chat-recent-item">
-                <span>${t}</span>
-                <svg class="more-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="opacity:1; transform:rotate(45deg);"><line x1="12" y1="17" x2="12" y2="22"/><path d="M9 3h6l-1 6 3.5 2.5V13H6.5v-1.5L10 9z"/></svg>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:16px; width:100%;">
-          <div class="chat-recents-head">
-            <span>Recents</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--grey3)" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
-            ${CHAT_RECENTS.map((t, i) => `
-              <button class="chat-recent-item" data-recent-idx="${i}" style="${i === 0 ? 'background:#1e1e1e; color:var(--white);' : ''}">
-                <span>${t}</span>
-                <svg class="more-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>
-              </button>
-            `).join('')}
-          </div>
-        </div>
+        <div id="chatSideTabs" class="chat-side-tabs"></div>
+        <div id="chatSideBody" style="display:flex; flex-direction:column; gap:16px; width:100%;"></div>
       </div>
       <div class="sidebar-footer">
         <div class="divider"></div>
@@ -77,7 +51,182 @@
         </button>
       </div>
       <div class="chat-glow-bg"></div>
-      <div class="chat-main">
+      <div class="chat-main" id="chatMain"></div>
+    `;
+
+    document.getElementById('chatSidebarToggle').addEventListener('click', () => {
+      chatSidebar.classList.toggle('collapsed');
+    });
+    document.getElementById('chatWorkspaceTab').addEventListener('click', showWorkspacePage);
+    document.getElementById('chatDriveTab').addEventListener('click', openDriveHome);
+    document.getElementById('chatNewBtn').addEventListener('click', () => ChatStore.newBlank());
+    document.getElementById('chatbotPage').querySelectorAll('[data-stub]').forEach(el => {
+      el.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้'));
+    });
+    renderChatSidebar();
+    renderChatMain();
+  }
+
+  // ----- Chatbot page: sidebar (chats | drafts), landing and conversation views -----
+  let chatSideTab = 'chats';
+  const chatByNewest = (a, b) => b.createdAt - a.createdAt;
+  const chatPageVisible = () => document.getElementById('chatbotPage').style.display !== 'none' && chatSidebar.style.display !== 'none';
+  const chatDocSvg = '<svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0"><rect x="4" y="2" width="16" height="20" rx="2.5" fill="#2B7BE4"/><path d="M8 9h8M8 13h8M8 17h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  const chatMoreSvg = (id) => `<svg class="more-ico" data-chat-more="${id}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>`;
+
+  // Small floating menu next to an anchor element; closes on any outside click.
+  function chatPopMenu(anchor, itemsHtml, onPick) {
+    document.querySelectorAll('.chat-menu').forEach(m => m.remove());
+    const menu = document.createElement('div');
+    menu.className = 'chat-menu';
+    menu.innerHTML = itemsHtml;
+    document.body.appendChild(menu);
+    const r = anchor.getBoundingClientRect();
+    const w = 200;
+    menu.style.top = (r.bottom + 4) + 'px';
+    menu.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left)) + 'px';
+    const close = () => { menu.remove(); document.removeEventListener('mousedown', outside, true); };
+    const outside = (e) => { if (!menu.contains(e.target)) close(); };
+    setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
+    menu.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => { close(); onPick(b.dataset.pick); }));
+  }
+
+  function renderChatSidebar() {
+    const tabs = document.getElementById('chatSideTabs');
+    const body = document.getElementById('chatSideBody');
+    if (!tabs || !body) return;
+    const S = ChatStore;
+    tabs.innerHTML = `
+      <button class="chat-side-tab ${chatSideTab === 'chats' ? 'on' : ''}" data-side-tab="chats">แชท</button>
+      <button class="chat-side-tab ${chatSideTab === 'arts' ? 'on' : ''}" data-side-tab="arts">ผลงาน<em>${S.artifacts.length}</em></button>`;
+    if (chatSideTab === 'chats') {
+      const item = (c) => {
+        const unsaved = S.unsavedOf(c.id).length;
+        return `<div class="chat-recent-item ${c.id === S.activeId ? 'active' : ''}" data-chat="${c.id}" role="button" tabindex="0">
+          <span>${driveEsc(c.title)}</span>${unsaved ? '<i class="chat-unsaved" title="มีผลงานร่างที่ยังไม่ได้บันทึก"></i>' : ''}${chatMoreSvg(c.id)}
+        </div>`;
+      };
+      const section = (title, list, extra) => `
+        <div style="display:flex; flex-direction:column; gap:16px; width:100%;">
+          <div class="chat-recents-head"><span>${title}</span>${extra || ''}</div>
+          <div style="display:flex; flex-direction:column; gap:8px; width:100%;">${list.length ? list.map(item).join('') : '<div class="chat-side-empty">ยังไม่มีแชท</div>'}</div>
+        </div>`;
+      const favs = S.chats.filter(c => c.favorite).sort(chatByNewest);
+      const recents = S.chats.filter(c => !c.favorite).sort(chatByNewest);
+      body.innerHTML = section('Favorite', favs) + section('Recents', recents);
+    } else {
+      const arts = S.artifacts.slice().sort((a, b) => b.createdAt - a.createdAt);
+      body.innerHTML = arts.length ? arts.map(a => {
+        const c = S.chat(a.chatId);
+        return `<div class="chat-art-item" data-art="${a.id}" role="button" tabindex="0">${chatDocSvg}
+          <div class="txt"><span class="nm">${driveEsc(a.name)}</span><span class="sub">${a.saved ? driveEsc(a.dest) : 'จากแชท: ' + driveEsc(c ? c.title : '-')}</span></div>
+          <span class="chip ${a.saved ? 'saved' : 'draft'}">${a.saved ? 'บันทึกแล้ว' : 'ร่าง'}</span></div>`;
+      }).join('') : '<div class="chat-side-empty">ยังไม่มีผลงาน<br><small>เอกสารที่ AI สร้างจะเก็บเป็นร่างที่นี่ จนกว่าจะบันทึกลงไดร์</small></div>';
+    }
+
+    tabs.querySelectorAll('[data-side-tab]').forEach(b => b.addEventListener('click', () => { chatSideTab = b.dataset.sideTab; renderChatSidebar(); }));
+    body.querySelectorAll('[data-chat]').forEach(el => el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-chat-more]')) return;
+      ChatStore.open(el.dataset.chat);
+    }));
+    body.querySelectorAll('[data-chat-more]').forEach(ico => ico.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = ico.dataset.chatMore;
+      const c = ChatStore.chat(id);
+      chatPopMenu(ico, `<button data-pick="fav">${c.favorite ? 'เอาออกจาก Favorite' : 'เพิ่มใน Favorite'}</button><button data-pick="del" class="danger">ลบแชท</button>`, (pick) => {
+        if (pick === 'fav') ChatStore.toggleFavorite(id);
+        else ChatUIDelete(id);
+      });
+    }));
+    body.querySelectorAll('[data-art]').forEach(el => el.addEventListener('click', () => {
+      const a = ChatStore.artifact(el.dataset.art);
+      if (!a) return;
+      ChatStore.open(a.chatId);
+      ChatStore.openArtifact(a.id);
+    }));
+  }
+  const ChatUIDelete = (id) => ChatUI.deleteDialog(id);
+
+  function chatModeChipHtml(mode) {
+    return `<button class="chat-mode-chip" data-chat-mode>${ChatStore.MODES[mode].short}</button>`;
+  }
+  function chatBindModePicker(root) {
+    root.querySelectorAll('[data-chat-mode],[data-chat-tool]').forEach(btn => btn.addEventListener('click', () => {
+      const S = ChatStore;
+      const cur = S.mode();
+      chatPopMenu(btn, Object.keys(S.MODES).map(k => `<button data-pick="${k}" class="${k === cur ? 'on' : ''}">${S.MODES[k].label}${S.MODES[k].hint ? ' <em>' + S.MODES[k].hint + '</em>' : ''}</button>`).join(''), (k) => S.setMode(k));
+    }));
+  }
+
+  function renderChatMain() {
+    const main = document.getElementById('chatMain');
+    if (!main) return;
+    const S = ChatStore;
+    const prev = document.getElementById('chatMainInput') || document.getElementById('chatConvInput');
+    const draft = prev ? prev.value : '';
+    const c = S.active();
+    if (!c) {
+      main.className = 'chat-main';
+      main.innerHTML = chatLandingInner();
+      const iconRow = main.querySelector('.chat-prompt-left-icons');
+      const toolBtn = iconRow.querySelector('[aria-label="เครื่องมือ AI"]');
+      toolBtn.removeAttribute('data-stub');
+      toolBtn.setAttribute('data-chat-tool', '1');
+      iconRow.insertAdjacentHTML('beforeend', chatModeChipHtml(S.blankMode));
+      const chatInput = document.getElementById('chatMainInput');
+      if (draft) chatInput.value = draft;
+      main.querySelectorAll('.chat-chip').forEach(chip => {
+        chip.addEventListener('click', () => { chatInput.value = chip.dataset.fill; chatInput.focus(); });
+      });
+      const send = () => { const t = chatInput.value.trim(); if (!t) { chatInput.focus(); return; } chatInput.value = ''; S.send(t); };
+      document.getElementById('chatSendBtn').addEventListener('click', send);
+      chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+      const toolsHead = document.getElementById('chatToolsHead');
+      const toolsGrid = document.getElementById('chatToolsGrid');
+      toolsHead.addEventListener('click', () => { toolsHead.classList.toggle('collapsed'); toolsGrid.classList.toggle('collapsed'); });
+      main.querySelectorAll('.chat-tool-card').forEach(card => card.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้')));
+      main.querySelectorAll('[data-stub]').forEach(el => el.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้')));
+      chatBindModePicker(main);
+      return;
+    }
+    main.className = 'chat-main conv';
+    main.innerHTML = `
+      <div class="chat-conv-title">${driveEsc(c.title)}</div>
+      <div class="chat-conv-msgs" id="chatConvMsgs">${ChatUI.messagesHtml(c, c.mode)}</div>
+      <div class="chat-prompt-box conv">
+        <input class="chat-prompt-placeholder" id="chatConvInput" type="text" placeholder="${ChatStore.MODES[c.mode].placeholder}" style="background:transparent;border:none;outline:none;color:var(--white);font-family:inherit;width:100%;">
+        <div class="chat-prompt-bottom">
+          <div class="chat-prompt-left-icons">
+            <button class="chat-icon-btn-plain" data-stub="1" aria-label="แนบไฟล์"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <button class="chat-icon-btn-plain" data-chat-tool="1" aria-label="เครื่องมือ AI"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l1.6 4.4L14 7l-4.4 1.6L8 13l-1.6-4.4L2 7l4.4-1.6z"/></svg></button>
+            ${chatModeChipHtml(c.mode)}
+          </div>
+          <div class="chat-prompt-right">
+            <button class="chat-model-pill" data-stub="1"><span class="lbl">Model</span> Thinking</button>
+            <button class="chat-send-btn" id="chatSendBtn" aria-label="ส่ง" ${c.busy ? 'disabled' : ''}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg></button>
+          </div>
+        </div>
+      </div>`;
+    const input = document.getElementById('chatConvInput');
+    if (draft) input.value = draft;
+    const send = () => { const t = input.value.trim(); if (!t) { input.focus(); return; } if (c.busy) return; input.value = ''; S.send(t); };
+    document.getElementById('chatSendBtn').addEventListener('click', send);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+    main.querySelectorAll('[data-stub]').forEach(el => el.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้')));
+    chatBindModePicker(main);
+    const msgs = document.getElementById('chatConvMsgs');
+    ChatUI.bindMessages(msgs);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  ChatStore.subscribe((evt) => {
+    if (!chatPageVisible()) return;
+    renderChatSidebar();
+    if (evt !== 'view' && evt !== 'open-artifact') renderChatMain();
+  });
+
+  function chatLandingInner() {
+    return `
         <div class="chat-greeting">What can I help with, ${CURRENT_USER.name.split(' ')[0]} ?</div>
         <div class="chat-prompt-box">
           <div class="chat-prompt-top">
@@ -133,41 +282,9 @@
             `).join('')}
           </div>
         </div>
-      </div>
     `;
-
-    document.getElementById('chatSidebarToggle').addEventListener('click', () => {
-      chatSidebar.classList.toggle('collapsed');
-    });
-    document.getElementById('chatWorkspaceTab').addEventListener('click', showWorkspacePage);
-    document.getElementById('chatDriveTab').addEventListener('click', openDriveHome);
-    document.getElementById('chatNewBtn').addEventListener('click', () => showToast('เริ่มแชทใหม่ (จำลอง)'));
-    document.querySelectorAll('.chat-recent-item').forEach(btn => {
-      btn.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้'));
-    });
-    const chatInput = document.getElementById('chatMainInput');
-    document.querySelectorAll('.chat-chip').forEach(chip => {
-      chip.addEventListener('click', () => { chatInput.value = chip.dataset.fill; chatInput.focus(); });
-    });
-    document.getElementById('chatSendBtn').addEventListener('click', () => {
-      if (!chatInput.value.trim()) { chatInput.focus(); return; }
-      showToast('ส่งข้อความแล้ว (จำลอง — ยังไม่ต่อ AI จริง)');
-      chatInput.value = '';
-    });
-    chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('chatSendBtn').click(); });
-    const toolsHead = document.getElementById('chatToolsHead');
-    const toolsGrid = document.getElementById('chatToolsGrid');
-    toolsHead.addEventListener('click', () => {
-      toolsHead.classList.toggle('collapsed');
-      toolsGrid.classList.toggle('collapsed');
-    });
-    document.querySelectorAll('.chat-tool-card').forEach(card => {
-      card.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้'));
-    });
-    document.getElementById('chatbotPage').querySelectorAll('[data-stub]').forEach(el => {
-      el.addEventListener('click', () => showToast('ฟีเจอร์นี้ยังไม่พร้อมใช้งานใน prototype นี้'));
-    });
   }
+
 
   function openInviteGate(project) {
     workspacePage.style.display = 'none';
