@@ -239,6 +239,10 @@
   seed('เปรียบเทียบราคา Notebook', false, 120, [['spreadsheet', 'เปรียบเทียบราคา Notebook', 'สรุปผลการค้นหา']]);
   seed('Analyst Salary', false, 1440, [['mindmap', 'Analyst Salary', 'สรุปผลการค้นหา']]);
   seed('ข้อกำหนด PDPA ที่ต้องรู้', false, 3600);
+  seed('สรุปประชุมทีมการตลาด', false, 14400);
+  seed('แนวทางประเมินผลพนักงาน', false, 36000);
+  seed('ร่างประกาศนโยบายลางาน', false, 86400);
+  seed('เปรียบเทียบผู้ให้บริการคลาวด์', false, 288000);
 
   // ================= shared UI =================
   const esc = (s) => driveEsc(String(s));
@@ -535,6 +539,104 @@
   am.addEventListener('mousedown', (e) => { if (e.target === am) closeAm(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && am.classList.contains('open') && !viewer.classList.contains('open')) closeAm(); });
   S.subscribe(() => { if (am.classList.contains('open')) renderAm(); });
+
+  // ----- "แชททั้งหมด" modal opened from Recents: every chat with time, sort, search, and a ⋮ menu (Figma 547:93885) -----
+  const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  // <1h minutes, <1d hours, up to 7 days "N วันที่แล้ว", older = Thai Buddhist-era date.
+  U.chatTime = (ts) => {
+    const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
+    if (m < 1) return 'เมื่อสักครู่';
+    if (m < 60) return m + ' นาทีที่แล้ว';
+    const h = Math.round(m / 60);
+    if (h < 24) return h + ' ชั่วโมงที่แล้ว';
+    const d = Math.floor(h / 24);
+    if (d <= 7) return d + ' วันที่แล้ว';
+    const dt = new Date(ts);
+    return dt.getDate() + ' ' + TH_MONTHS[dt.getMonth()] + ' ' + (dt.getFullYear() + 543);
+  };
+
+  const cm = document.createElement('div');
+  cm.className = 'am-overlay';
+  document.body.appendChild(cm);
+  const cmState = { q: '', asc: false, search: false };
+
+  function closeCm() { cm.classList.remove('open'); cm.innerHTML = ''; document.querySelectorAll('.chat-menu.cm-pop').forEach(m => m.remove()); }
+
+  // Small floating menu next to an anchor; closes on any outside click.
+  function cmPop(anchor, html, cls, onPick) {
+    document.querySelectorAll('.chat-menu.cm-pop').forEach(m => m.remove());
+    const menu = document.createElement('div');
+    menu.className = 'chat-menu cm-pop ' + (cls || '');
+    menu.innerHTML = html;
+    document.body.appendChild(menu);
+    const r = anchor.getBoundingClientRect();
+    menu.style.top = (r.bottom + 4) + 'px';
+    menu.style.left = Math.max(8, Math.min(window.innerWidth - menu.offsetWidth - 8, r.right - menu.offsetWidth)) + 'px';
+    const close = () => { menu.remove(); document.removeEventListener('mousedown', outside, true); };
+    const outside = (e) => { if (!menu.contains(e.target)) close(); };
+    setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
+    menu.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => { close(); onPick(b.dataset.pick); }));
+  }
+
+  function renderCm() {
+    const q = cmState.q.trim().toLowerCase();
+    let chats = S.chats.filter(c => !q || c.title.toLowerCase().includes(q));
+    chats = chats.sort((a, b) => cmState.asc ? a.createdAt - b.createdAt : b.createdAt - a.createdAt);
+    cm.innerHTML = `
+      <div class="am" role="dialog" aria-label="แชททั้งหมด">
+        <div class="am-inner">
+          <div class="am-head">
+            <h2>แชททั้งหมด</h2>
+            <div class="am-tools">
+              ${cmState.search ? `<input class="am-search" id="cmQ" type="text" placeholder="ค้นหาแชท" value="${esc(cmState.q)}">` : ''}
+              <button class="am-ico" id="cmSearchBtn" aria-label="ค้นหา"><img src="${ICON('art-search')}" width="16" height="16" alt=""></button>
+              <button class="am-ico" id="cmSort" aria-label="เรียงลำดับ"><img src="${ICON('art-sort')}" width="24" height="24" alt=""></button>
+              <button class="am-new" id="cmNew"><img src="${ICON('art-chat')}" width="16" height="16" alt=""><span>New</span></button>
+            </div>
+          </div>
+          <div class="cm-list">
+            ${chats.length ? chats.map(c => `
+              <div class="cm-row ${c.id === S.activeId ? 'active' : ''}" data-cm-chat="${c.id}" role="button" tabindex="0">
+                <span class="t">${esc(c.title)}</span>
+                <span class="time">${U.chatTime(c.createdAt)}</span>
+                <img class="more" data-cm-more="${c.id}" src="${ICON('art-more')}" width="16" height="16" alt="เพิ่มเติม">
+              </div>`).join('') : `<div class="am-empty">${q ? 'ไม่พบแชท' : 'ยังไม่มีแชท'}</div>`}
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('cmSearchBtn').addEventListener('click', () => { cmState.search = !cmState.search; if (!cmState.search) cmState.q = ''; renderCm(); const i = document.getElementById('cmQ'); if (i) i.focus(); });
+    const qi = document.getElementById('cmQ');
+    if (qi) qi.addEventListener('input', () => { cmState.q = qi.value; const pos = qi.selectionStart; renderCm(); const n = document.getElementById('cmQ'); n.focus(); n.setSelectionRange(pos, pos); });
+    document.getElementById('cmSort').addEventListener('click', (e) => {
+      cmPop(e.currentTarget, `<button data-pick="desc" class="${cmState.asc ? '' : 'on'}">ใหม่สุด</button><button data-pick="asc" class="${cmState.asc ? 'on' : ''}">เก่าสุด</button>`, 'cm-sort', (k) => { cmState.asc = k === 'asc'; renderCm(); });
+    });
+    document.getElementById('cmNew').addEventListener('click', () => { closeCm(); S.newBlank(); if (!isVisible('chatbotPage')) { S.holdNext = true; openChatbotPage(); } });
+    cm.querySelectorAll('[data-cm-chat]').forEach(row => row.addEventListener('click', (e) => {
+      if (e.target.closest('[data-cm-more]')) return;
+      closeCm(); S.open(row.dataset.cmChat); if (!isVisible('chatbotPage')) { S.holdNext = true; openChatbotPage(); }
+    }));
+    cm.querySelectorAll('[data-cm-more]').forEach(ico => ico.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = ico.dataset.cmMore;
+      const c = S.chat(id);
+      cmPop(ico,
+        `<button data-pick="fav"><img src="${ICON('art-pin-fill')}" width="16" height="16" alt=""><span>${c.favorite ? 'Unfavorite' : 'Favorite'}</span></button>
+         <button data-pick="rename"><img src="${ICON('art-edit')}" width="16" height="16" alt=""><span>Rename</span></button>
+         <hr>
+         <button data-pick="del" class="danger"><img src="${ICON('art-trash')}" width="16" height="16" alt=""><span>Delete</span></button>`,
+        '', (pick) => {
+          if (pick === 'fav') S.togglePin(id);
+          else if (pick === 'rename') U.renameDialog(id);
+          else U.deleteDialog(id);
+        });
+    }));
+  }
+
+  U.chatsModal = () => { cmState.q = ''; cmState.search = false; cmState.asc = false; cm.classList.add('open'); renderCm(); };
+  cm.addEventListener('mousedown', (e) => { if (e.target === cm) closeCm(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cm.classList.contains('open') && !document.querySelector('.chat-menu.cm-pop') && !overlayOpen()) closeCm(); });
+  S.subscribe(() => { if (cm.classList.contains('open')) renderCm(); });
+  const overlayOpen = () => { const o = document.querySelector('.drv-modal-overlay.open'); return !!o; };
 
   // ----- dialogs -----
   const overlay = document.createElement('div');

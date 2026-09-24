@@ -91,7 +91,6 @@
     menu.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => { close(); onPick(b.dataset.pick); }));
   }
 
-  let chatRecentsOpen = true;
   let chatSideSearch = false;
   let chatSideQuery = '';
 
@@ -112,7 +111,7 @@
     const q = chatSideQuery.trim().toLowerCase();
     const match = (c) => !q || c.title.toLowerCase().includes(q);
     const pinned = S.chats.filter(c => c.favorite && match(c)).sort(chatByNewest);
-    const recents = S.chats.filter(c => !c.favorite && match(c)).sort(chatByNewest);
+    const recents = S.chats.filter(c => !c.favorite && match(c)).sort(chatByNewest).slice(0, chatSideQuery.trim() ? 50 : 6); // sidebar shows the latest; Recents opens the full list
     body.innerHTML = `
       <button class="chat-sec-link" id="chatArtRow"><b>Artifact</b>${ic('art-arrow-right')}</button>
       <div class="chat-sec">
@@ -125,11 +124,11 @@
           <button class="chat-sec-ico" id="chatSideSearchBtn" aria-label="ค้นหาแชท">${ic('art-search')}</button>
         </div>
         ${chatSideSearch ? `<input class="chat-side-search" id="chatSideQ" type="text" placeholder="ค้นหาแชท" value="${driveEsc(chatSideQuery)}">` : ''}
-        ${chatRecentsOpen ? `<div class="chat-sec-list">${recents.length ? recents.map(c => item(c, false)).join('') : '<div class="chat-side-empty">ไม่พบแชท</div>'}</div>` : ''}
+        <div class="chat-sec-list">${recents.length ? recents.map(c => item(c, false)).join('') : '<div class="chat-side-empty">ไม่พบแชท</div>'}</div>
       </div>`;
 
     document.getElementById('chatArtRow').addEventListener('click', () => ChatUI.artifactsModal());
-    document.getElementById('chatRecentsToggle').addEventListener('click', () => { chatRecentsOpen = !chatRecentsOpen; renderChatSidebar(); });
+    document.getElementById('chatRecentsToggle').addEventListener('click', () => ChatUI.chatsModal());
     document.getElementById('chatSideSearchBtn').addEventListener('click', () => {
       chatSideSearch = !chatSideSearch; if (!chatSideSearch) chatSideQuery = '';
       renderChatSidebar();

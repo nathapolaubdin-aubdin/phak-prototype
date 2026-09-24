@@ -3461,3 +3461,31 @@
 .dash-card-title.link:hover { text-decoration: underline; }
 
 .drive-row[data-dash-drive] { cursor: pointer; }
+
+/* sidebar heading arrows only appear on hover */
+.chat-sec-link img { opacity: 0; transition: opacity 0.12s ease; }
+
+.chat-sec-link:hover img, .chat-sec-link:focus-visible img { opacity: 1; }
+
+/* Recents modal rows (Figma 547:93885) */
+.cm-list { display: flex; flex-direction: column; gap: 8px; }
+
+.cm-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 44px; box-sizing: border-box; padding: 0 8px; border-radius: 16px; font-size: 12px; cursor: pointer; }
+
+.cm-row .t { flex: 1; min-width: 0; color: #a7a7a7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cm-row .time { color: #606060; white-space: nowrap; }
+
+.cm-row .more { display: none; flex: none; }
+
+.cm-row:hover, .cm-row.active { background: #282828; }
+
+.cm-row:hover .t, .cm-row.active .t { color: #fff; font-weight: 500; }
+
+.cm-row:hover .time { display: none; }
+
+.cm-row:hover .more { display: block; }
+
+.chat-menu.cm-sort { min-width: 120px; gap: 8px; }
+
+.chat-menu.cm-sort button { font-size: 16px; font-weight: 300; padding: 8px; }
