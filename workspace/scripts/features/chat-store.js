@@ -1,9 +1,10 @@
 // ---------- Chat store, mock AI engine, and shared chat UI helpers ----------
 // One store for the whole app: the right AI panel (Drive/Workspace) and the Chatbot
-// page read the same chats, so history, favorites and deletes are always in sync.
-// Artifacts are per-user DRAFTS that live with their chat and are invisible to Drive
-// until the user saves them as a real file. Deleting a chat permanently deletes its
-// drafts (no trash). All AI output is mocked and everything is in-memory.
+// page read the same chats, so history, pins and deletes are always in sync.
+// Artifacts (Presentation / Document / Spreadsheet / Mind Map) are per-user DRAFTS
+// that live with their chat and are invisible to Drive until the user saves them as a
+// real file. Deleting a chat permanently deletes its drafts (no trash).
+// All AI output is mocked and everything is in-memory.
 (function () {
   const NEW_TITLE = 'แชทใหม่';
   const MODES = {
@@ -19,7 +20,15 @@
   };
   const STEPS = ['ค้นหาแหล่งข้อมูลจากหลายที่มา', 'อ่านและคัดกรองเนื้อหา', 'วิเคราะห์และเปรียบเทียบข้อมูล', 'เรียบเรียงเป็นรายงาน'];
 
-  const S = window.ChatStore = { chats: [], artifacts: [], activeId: null, blankMode: 'web', viewArtifactId: null, MODES, GREETING, STEPS, NEW_TITLE };
+  // Artifact types the "เครื่องมือ" cards can produce.
+  const TYPES = {
+    presentation: { label: 'Presentation', ext: 'PPT', file: 'pptx', icon: 'art-presentation', w: 42, h: 61 },
+    document: { label: 'Document', ext: 'DOCX', file: 'docx', icon: null, w: 36, h: 52 },
+    spreadsheet: { label: 'Spreadsheet', ext: 'XLSX', file: 'xlsx', icon: 'art-spreadsheet', w: 31.63, h: 50 },
+    mindmap: { label: 'Mind Map', ext: 'MM', file: 'mm', icon: 'art-mindmap', w: 48, h: 50 }
+  };
+
+  const S = window.ChatStore = { chats: [], artifacts: [], activeId: null, blankMode: 'web', blankTool: null, viewArtifactId: null, MODES, GREETING, STEPS, TYPES, NEW_TITLE };
   const listeners = [];
   let cseq = 0, aseq = 0;
 
@@ -31,20 +40,29 @@
   S.active = () => S.chats.find(c => c.id === S.activeId) || null;
   S.chat = (id) => S.chats.find(c => c.id === id) || null;
   S.artifact = (id) => S.artifacts.find(a => a.id === id) || null;
-  S.artifactsOf = (chatId) => S.artifacts.filter(a => a.chatId === chatId);
+  S.artifactsOf = (chatId) => S.artifacts.filter(a => a.chatId === chatId).sort((a, b) => b.createdAt - a.createdAt);
   S.unsavedOf = (chatId) => S.artifactsOf(chatId).filter(a => !a.saved);
   S.mode = () => (S.active() || { mode: S.blankMode }).mode;
+  S.tool = () => (S.active() ? S.active().tool : S.blankTool) || null;
 
   // ----- chats -----
-  S.newBlank = () => { S.activeId = null; S.viewArtifactId = null; emit('active'); };
+  S.newBlank = () => { S.activeId = null; S.blankTool = null; S.viewArtifactId = null; emit('active'); };
   S.open = (id) => { S.activeId = id; const arts = S.artifactsOf(id); S.viewArtifactId = arts.length ? arts[0].id : null; emit('active'); };
-  S.toggleFavorite = (id) => { const c = S.chat(id); if (c) { c.favorite = !c.favorite; emit('list'); } };
+  S.togglePin = (id) => { const c = S.chat(id); if (c) { c.favorite = !c.favorite; emit('list'); } };
+  S.rename = (id, title) => { const c = S.chat(id); if (c && title.trim()) { c.title = title.trim(); emit('list'); } };
 
   S.setMode = (mode) => {
     const c = S.active();
     if (!c) S.blankMode = mode;
-    else if (c.messages.some(m => m.role === 'user')) { S.blankMode = mode; S.activeId = null; S.viewArtifactId = null; }
+    else if (c.messages.some(m => m.role === 'user')) { S.blankMode = mode; S.blankTool = null; S.activeId = null; S.viewArtifactId = null; }
     else c.mode = mode;
+    emit('mode');
+  };
+
+  // Pick what to create (Presentation / Document / ...) before sending; only on a blank chat.
+  S.setTool = (tool) => {
+    if (S.active()) { S.activeId = null; S.viewArtifactId = null; }
+    S.blankTool = tool;
     emit('mode');
   };
 
@@ -57,12 +75,46 @@
     emit('active');
   };
 
-  function makeChat(title, mode, fav, ageMin) {
-    const c = { id: 'c' + (++cseq), title, mode, favorite: !!fav, messages: [], busy: false, createdAt: Date.now() - (ageMin || 0) * 60000 };
-    return c;
+  function makeChat(title, mode, fav, ageMin, tool) {
+    return { id: 'c' + (++cseq), title, mode, tool: tool || null, favorite: !!fav, messages: [], busy: false, createdAt: Date.now() - (ageMin || 0) * 60000 };
   }
-  function makeArtifact(chat, name, title, body) {
-    const a = { id: 'a' + (++aseq), chatId: chat.id, name, title, body, saved: false, dest: null, createdAt: Date.now() };
+
+  // ----- mock artifact content -----
+  function genContent(type, topic) {
+    const t = trunc(topic, 30);
+    if (type === 'presentation') {
+      const slides = [
+        { kind: 'title', title: topic, sub: 'สรุปผลการค้นหาและแผนสำหรับการตัดสินใจ', src: 'ข้อมูลจำลองสำหรับ prototype' },
+        { title: 'ภาพรวม', bullets: ['ที่มาและวัตถุประสงค์', 'ขอบเขตของข้อมูลที่ตรวจสอบ', 'ข้อสรุปสำคัญโดยย่อ'] },
+        { title: 'ประเด็นสำคัญ', bullets: ['แนวโน้มหลักที่พบซ้ำในหลายแหล่ง', 'ปัจจัยที่ส่งผลต่อผลลัพธ์', 'ความเสี่ยงที่ควรติดตาม'] },
+        { title: 'ตัวเลขเปรียบเทียบ', bullets: ['ตัวเลือก A: เหมาะกับงานทั่วไป', 'ตัวเลือก B: ประหยัดกว่าเฉลี่ย 8%', 'ตัวเลือก C: เหมาะกับงานขนาดใหญ่'] },
+        { title: 'ข้อเสนอแนะ', bullets: ['เริ่มจากตัวเลือกที่คุ้มค่าที่สุด', 'ทดลองกับกลุ่มเล็กก่อนขยาย', 'ทบทวนผลทุกไตรมาส'] },
+        { title: 'แหล่งอ้างอิง (จำลอง)', bullets: ['example.com', 'news.example.org', 'gov.example.th'] }
+      ];
+      return { name: 'นำเสนอ - ' + t + '.pptx', short: 'สรุป: ' + t, title: topic, data: { slides },
+        body: slides.map((s, i) => (s.kind === 'title' ? s.title + '\n' + s.sub : s.title + '\n' + s.bullets.map(b => '• ' + b).join('\n'))).join('\n\n') };
+    }
+    if (type === 'spreadsheet') {
+      const cols = ['รายการ', 'ตัวเลือก A', 'ตัวเลือก B', 'หมายเหตุ'];
+      const rows = [['ราคา (บาท)', '25,900', '23,900', 'B ถูกกว่า 8%'], ['รับประกัน (ปี)', '2', '2', 'เท่ากัน'], ['จัดส่ง (วัน)', '3', '5', 'A เร็วกว่า'], ['คะแนนรีวิว', '4.6', '4.4', 'จากผู้ใช้จริง'], ['สต็อก', 'มี', 'จำกัด', 'ตรวจสอบก่อนสั่ง']];
+      return { name: 'ตาราง - ' + t + '.xlsx', short: 'สรุป: ' + t, title: topic, data: { cols, rows },
+        body: cols.join('\t') + '\n' + rows.map(r => r.join('\t')).join('\n') };
+    }
+    if (type === 'mindmap') {
+      const branches = [
+        { label: 'ภาพรวม', kids: ['ที่มา', 'ขอบเขต'] }, { label: 'ประเด็นหลัก', kids: ['แนวโน้ม', 'ปัจจัย'] },
+        { label: 'ข้อมูลเปรียบเทียบ', kids: ['ตัวเลือก A', 'ตัวเลือก B'] }, { label: 'ความเสี่ยง', kids: ['ต้นทุน', 'เวลา'] }, { label: 'ข้อเสนอแนะ', kids: ['ระยะสั้น', 'ระยะยาว'] }
+      ];
+      return { name: 'Mind Map - ' + t + '.mm', short: 'สรุป: ' + t, title: topic, data: { center: topic, branches },
+        body: topic + '\n\n' + branches.map(b => '• ' + b.label + ': ' + b.kids.join(', ')).join('\n') };
+    }
+    const body = `ผลการค้นหาเรื่อง ${topic}\n\n• ประเด็นหลักที่พบซ้ำในหลายแหล่งข้อมูล\n• ตัวเลขและข้อมูลเปรียบเทียบเบื้องต้น\n• ข้อควรระวังและแนวทางที่แนะนำ`;
+    return { name: 'สรุป - ' + t + '.docx', short: 'สรุป: ' + t, title: 'สรุป: ' + topic, data: null, body };
+  }
+
+  function makeArtifact(chat, type, topic, ageMin, over) {
+    const g = Object.assign(genContent(type, topic), over || {});
+    const a = { id: 'a' + (++aseq), chatId: chat.id, type, name: g.name, short: g.short, title: g.title, body: g.body, data: g.data, saved: false, dest: null, createdAt: Date.now() - (ageMin || 0) * 60000 };
     S.artifacts.unshift(a);
     return a;
   }
@@ -71,9 +123,10 @@
   S.send = (text) => {
     let c = S.active();
     if (!c) {
-      c = makeChat(trunc(text, 24), S.blankMode, false, 0);
+      c = makeChat(trunc(text, 24), S.blankMode, false, 0, S.blankTool);
       S.chats.unshift(c);
       S.activeId = c.id;
+      S.blankTool = null;
       S.viewArtifactId = null;
     }
     if (c.busy) return;
@@ -105,8 +158,7 @@
             { host: 'gov.example.th', title: 'ข้อมูลทางการ' }
           ]
         });
-        const a = makeArtifact(c, 'สรุป - ' + trunc(text, 30) + '.docx', 'สรุป: ' + text,
-          `ผลการค้นหาเรื่อง ${text}\n\n• ประเด็นหลักที่พบซ้ำในหลายแหล่งข้อมูล\n• ตัวเลขและข้อมูลเปรียบเทียบเบื้องต้น\n• ข้อควรระวังและแนวทางที่แนะนำ`);
+        const a = makeArtifact(c, c.tool || 'document', text);
         c.messages.push({ type: 'artifact', artifactId: a.id });
         S.viewArtifactId = a.id;
         emit('artifact', a);
@@ -140,8 +192,8 @@
       if (plan.step >= STEPS.length) {
         plan.state = 'done'; c.busy = false;
         c.messages.push({ type: 'text', role: 'ai', paras: [`ค้นคว้าเรื่อง “${plan.topic}” เสร็จแล้ว จาก 12 แหล่งข้อมูล (จำลอง)`, '• ภาพรวมและแนวโน้มสำคัญ', '• การเปรียบเทียบข้อมูลจากหลายที่มา', '• ข้อเสนอแนะและประเด็นที่ควรติดตามต่อ'] });
-        const a = makeArtifact(c, 'รายงานวิจัย - ' + trunc(plan.topic, 30) + '.docx', 'รายงานวิจัย: ' + plan.topic,
-          `รายงานวิจัยเรื่อง ${plan.topic}\n\n• ภาพรวมและแนวโน้มสำคัญ\n• การเปรียบเทียบข้อมูลจากหลายที่มา\n• ข้อเสนอแนะและประเด็นที่ควรติดตามต่อ`);
+        const type = c.tool || 'document';
+        const a = makeArtifact(c, type, plan.topic, 0, type === 'document' ? { name: 'รายงานวิจัย - ' + trunc(plan.topic, 30) + '.docx', short: 'รายงานวิจัย: ' + trunc(plan.topic, 24), title: 'รายงานวิจัย: ' + plan.topic, body: `รายงานวิจัยเรื่อง ${plan.topic}\n\n• ภาพรวมและแนวโน้มสำคัญ\n• การเปรียบเทียบข้อมูลจากหลายที่มา\n• ข้อเสนอแนะและประเด็นที่ควรติดตามต่อ` } : null);
         c.messages.push({ type: 'artifact', artifactId: a.id });
         S.viewArtifactId = a.id;
         emit('artifact', a);
@@ -170,32 +222,47 @@
     return res;
   };
 
-  // ----- seed data (existing sidebar placeholders, now real chats) -----
-  const seed = (title, fav, ageMin, draft) => {
+  // ----- seed data: chats that already produced artifacts, like the Figma modal -----
+  const seed = (title, fav, ageMin, arts) => {
     const c = makeChat(title, 'web', fav, ageMin);
     c.messages.push({ type: 'text', role: 'user', paras: [title] });
     c.messages.push({ type: 'text', role: 'ai', paras: [`นี่คือคำตอบตัวอย่างสำหรับ “${title}” (ข้อมูลจำลองสำหรับ prototype)`, '• ประเด็นสำคัญข้อที่ 1', '• ประเด็นสำคัญข้อที่ 2'] });
-    if (draft) {
-      const a = makeArtifact(c, 'สรุป - ' + title + '.docx', 'สรุป: ' + title, `สรุปเรื่อง ${title}\n\n• ประเด็นสำคัญข้อที่ 1\n• ประเด็นสำคัญข้อที่ 2`);
+    (arts || []).forEach(([type, topic, name]) => {
+      const a = makeArtifact(c, type, topic, ageMin, name ? { short: name } : null);
       c.messages.push({ type: 'artifact', artifactId: a.id });
-    }
+    });
     S.chats.push(c);
   };
-  seed('สรุปยอดขายไตรมาส 2', true, 1500, false);
-  seed('ร่างสัญญาจ้างงาน', true, 3000, false);
-  seed('แผนการตลาดรถ EV', false, 10, true);
-  seed('เปรียบเทียบราคา Notebook', false, 60, false);
-  seed('Analyst Salary', false, 300, false);
-  seed('ข้อกำหนด PDPA ที่ต้องรู้', false, 1000, false);
+  seed('สรุปยอดขายไตรมาส 2', true, 1500);
+  seed('ร่างสัญญาจ้างงาน', false, 3000);
+  seed('แผนการตลาดรถ EV', false, 15, [['presentation', 'ภาพรวมตลาดรถ EV', 'สรุปผลการค้นหา'], ['presentation', 'คู่แข่งและราคารถ EV', 'คู่แข่งและราคา'], ['presentation', 'แผนกลยุทธ์การตลาด EV', 'แผนกลยุทธ์']]);
+  seed('เปรียบเทียบราคา Notebook', false, 120, [['spreadsheet', 'เปรียบเทียบราคา Notebook', 'สรุปผลการค้นหา']]);
+  seed('Analyst Salary', false, 1440, [['mindmap', 'Analyst Salary', 'สรุปผลการค้นหา']]);
+  seed('ข้อกำหนด PDPA ที่ต้องรู้', false, 3600);
 
   // ================= shared UI =================
   const esc = (s) => driveEsc(String(s));
   const ICON = (n) => `assets/icons/${n}.svg`;
   const DOC_SVG = '<svg width="20" height="20" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2.5" fill="#2B7BE4"/><path d="M8 9h8M8 13h8M8 17h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  const DOC_LINE = '<svg width="36" height="52" viewBox="0 0 36 52" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M4 2h20l8 8v40H4z"/><path d="M24 2v8h8"/><path d="M10 22h16M10 29h16M10 36h11"/></svg>';
 
   const U = window.ChatUI = {};
   const isVisible = (id) => { const el = document.getElementById(id); return !!el && el.style.display !== 'none'; };
   U.isVisible = isVisible;
+  const typeLabel = (a) => `${TYPES[a.type].label} | .${TYPES[a.type].ext}`;
+  const typeIconHtml = (a) => {
+    const T = TYPES[a.type];
+    return T.icon ? `<img src="${ICON(T.icon)}" style="width:${T.w}px;height:${T.h}px" alt="">` : DOC_LINE;
+  };
+
+  U.relTime = (ts) => {
+    const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
+    if (m < 1) return 'เมื่อสักครู่';
+    if (m < 60) return m + ' นาทีที่แล้ว';
+    const h = Math.round(m / 60);
+    if (h < 24) return h + ' ชั่วโมงที่แล้ว';
+    return Math.round(h / 24) + ' วัน';
+  };
 
   // Where a "quick save" would land, based on the Drive page currently open (or null).
   U.driveContext = () => {
@@ -240,7 +307,7 @@
     }
     return `<div class="ai-msg"><div class="ai-card">
       <div class="ai-artcard-top">${DOC_SVG}<span class="ai-file-name">${esc(a.name)}</span></div>
-      <div class="ai-artcard-status">${status}</div>
+      <div class="ai-artcard-status"><span class="ai-type">${typeLabel(a)}</span> ${status}</div>
       <div class="ai-plan-btns start">${btns}</div>
     </div></div>`;
   }
@@ -285,7 +352,7 @@
       else if (act === 'retry') S.retry(chat.id);
       else if (act === 'plan-start') S.startPlan(chat.id, +b.dataset.i);
       else if (act === 'plan-cancel' || act === 'plan-stop') S.stopPlan(chat.id, +b.dataset.i);
-      else if (act === 'open-art') S.openArtifact(b.dataset.art);
+      else if (act === 'open-art') U.openViewer(b.dataset.art);
       else if (act === 'save-art') U.saveDialog([b.dataset.art]);
       else if (act === 'quick-save') {
         const ctx = U.driveContext();
@@ -294,7 +361,7 @@
     }));
   };
 
-  // ----- artifact viewer (Result panel body) -----
+  // ----- compact artifact preview (right Result panel) -----
   const bodyHtml = (body) => {
     let html = '', list = [];
     const flush = () => { if (list.length) { html += `<ul>${list.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`; list = []; } };
@@ -310,13 +377,13 @@
     const a = S.artifact(artId);
     if (!a) return '<div class="art-empty">ยังไม่มีผลลัพธ์ในแชทนี้<br><small>เมื่อ AI สร้างเอกสาร จะแสดงที่นี่ในรูปแบบ “ร่าง” ที่ยังไม่ถูกบันทึกลงไดร์</small></div>';
     const tabs = S.artifactsOf(a.chatId);
-    const tabsHtml = tabs.length > 1 ? `<div class="art-tabs">${tabs.map(t => `<button class="art-tab ${t.id === a.id ? 'on' : ''}" data-art-tab="${t.id}">${esc(t.name)}</button>`).join('')}</div>` : '';
+    const tabsHtml = tabs.length > 1 ? `<div class="art-tabs">${tabs.map(t => `<button class="art-tab ${t.id === a.id ? 'on' : ''}" data-art-tab="${t.id}">${esc(t.short)}</button>`).join('')}</div>` : '';
     const status = a.saved ? `<span class="ai-saved">บันทึกแล้ว · ${esc(a.dest)}</span>` : '<span class="ai-draft">ร่าง · ยังไม่ได้บันทึกที่ใด (จะหายไปเมื่อลบแชท)</span>';
     return `${tabsHtml}
-      <div class="art-meta"><span class="art-name">${esc(a.name)}</span>${status}</div>
-      <div class="art-page"><h1>${esc(a.title)}</h1>${bodyHtml(a.body)}</div>
+      <div class="art-meta"><span class="art-name">${esc(a.name)}</span><span class="ai-type">${typeLabel(a)}</span>${status}</div>
+      <div class="art-page"><h1>${esc(a.title)}</h1>${bodyHtml(a.type === 'presentation' ? a.data.slides.slice(1).map(s => s.title + '\n' + s.bullets.map(b => '• ' + b).join('\n')).join('\n') : a.body.split('\n').slice(a.type === 'document' ? 2 : 0).join('\n'))}</div>
       <div class="art-foot">
-        <button class="ai-btn alt" data-art-act="download">ดาวน์โหลด</button>
+        <button class="ai-btn alt" data-art-act="full" data-art="${a.id}">เปิดเต็มจอ</button>
         ${a.saved ? '' : `<button class="ai-btn" data-art-act="save" data-art="${a.id}">บันทึกลงไดร์…</button>`}
       </div>`;
   };
@@ -324,19 +391,181 @@
   U.bindViewer = (root) => {
     root.querySelectorAll('[data-art-tab]').forEach(b => b.addEventListener('click', () => { S.viewArtifactId = b.dataset.artTab; emit('view'); }));
     root.querySelectorAll('[data-art-act]').forEach(b => b.addEventListener('click', () => {
-      if (b.dataset.artAct === 'download') showToast('ดาวน์โหลด (จำลอง — ยังไม่ต่อระบบจริง)');
+      if (b.dataset.artAct === 'full') U.openViewer(b.dataset.art);
       else U.saveDialog([b.dataset.art]);
     }));
   };
 
+  // ----- full-screen artifact viewer (Figma "Present") -----
+  const viewer = document.createElement('div');
+  viewer.className = 'av';
+  document.body.appendChild(viewer);
+  const av = { id: null, slide: 0 };
+
+  function closeViewer() { viewer.classList.remove('open'); viewer.innerHTML = ''; av.id = null; }
+
+  function slideHtml(s) {
+    if (s.kind === 'title') return `<div class="sl sl-title"><div class="sl-box"><h1>${esc(s.title)}</h1><p class="sl-sub">${esc(s.sub)}</p><p class="sl-src">${esc(s.src)}</p></div></div>`;
+    return `<div class="sl"><h2>${esc(s.title)}</h2><ul>${s.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul><span class="sl-tag">PHAK</span></div>`;
+  }
+
+  function mindmapHtml(d) {
+    const cx = 450, cy = 280, R1 = 175, R2 = 285;
+    const ang = [-90, -18, 54, 126, 198];
+    let lines = '', nodes = `<div class="mm-node center" style="left:${cx}px;top:${cy}px">${esc(d.center)}</div>`;
+    d.branches.forEach((b, i) => {
+      const a = ang[i % ang.length] * Math.PI / 180;
+      const bx = cx + R1 * Math.cos(a), by = cy + R1 * Math.sin(a);
+      lines += `<line x1="${cx}" y1="${cy}" x2="${bx}" y2="${by}"/>`;
+      nodes += `<div class="mm-node branch" style="left:${bx}px;top:${by}px">${esc(b.label)}</div>`;
+      b.kids.forEach((k, j) => {
+        const a2 = a + (j ? 0.32 : -0.32);
+        const kx = cx + R2 * Math.cos(a2), ky = cy + R2 * Math.sin(a2);
+        lines += `<line x1="${bx}" y1="${by}" x2="${kx}" y2="${ky}"/>`;
+        nodes += `<div class="mm-node kid" style="left:${kx}px;top:${ky}px">${esc(k)}</div>`;
+      });
+    });
+    return `<div class="av-mm"><svg width="900" height="560" viewBox="0 0 900 560">${lines}</svg>${nodes}</div>`;
+  }
+
+  function renderViewer() {
+    const a = S.artifact(av.id);
+    if (!a) { closeViewer(); return; }
+    const status = a.saved ? `<span class="ai-saved">บันทึกแล้ว · ${esc(a.dest)}</span>` : '<span class="ai-draft">ร่าง · ยังไม่ได้บันทึกที่ใด</span>';
+    let stage;
+    if (a.type === 'presentation') {
+      const slides = a.data.slides;
+      stage = `<div class="av-slide">${slideHtml(slides[av.slide])}</div>`;
+    } else if (a.type === 'spreadsheet') {
+      stage = `<div class="av-sheet"><table><thead><tr>${a.data.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${a.data.rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    } else if (a.type === 'mindmap') stage = mindmapHtml(a.data);
+    else stage = `<div class="av-doc"><h1>${esc(a.title)}</h1>${bodyHtml(a.body.split('\n').slice(2).join('\n'))}</div>`;
+
+    let pager = '';
+    if (a.type === 'presentation') {
+      const n = a.data.slides.length;
+      pager = `<div class="av-pager"><button class="av-arrow prev" data-av-step="-1" aria-label="ก่อนหน้า"></button><div class="av-track">${
+        Array.from({ length: n }, (_, i) => i === av.slide ? '<span class="av-seg"></span>' : `<button class="av-dot" data-av-go="${i}" aria-label="สไลด์ ${i + 1}"></button>`).join('')
+      }</div><button class="av-arrow next" data-av-step="1" aria-label="ถัดไป"></button></div>`;
+    }
+    viewer.innerHTML = `
+      <div class="av-top">
+        <div class="av-title"><span class="nm">${esc(a.name)}</span><span class="ai-type">${typeLabel(a)}</span>${status}</div>
+        <div class="av-actions">
+          ${a.saved ? '' : '<button class="ai-btn sm" id="avSave">บันทึกลงไดร์…</button>'}
+          <button class="ai-btn sm alt" id="avDownload">ดาวน์โหลด</button>
+          <button class="av-close" id="avClose" aria-label="ปิด">✕</button>
+        </div>
+      </div>
+      <div class="av-stage">${stage}</div>${pager}`;
+    document.getElementById('avClose').addEventListener('click', closeViewer);
+    document.getElementById('avDownload').addEventListener('click', () => showToast('ดาวน์โหลด (จำลอง — ยังไม่ต่อระบบจริง)'));
+    const save = document.getElementById('avSave');
+    if (save) save.addEventListener('click', () => U.saveDialog([a.id], renderViewer));
+    viewer.querySelectorAll('[data-av-step]').forEach(b => b.addEventListener('click', () => stepSlide(+b.dataset.avStep)));
+    viewer.querySelectorAll('[data-av-go]').forEach(b => b.addEventListener('click', () => { av.slide = +b.dataset.avGo; renderViewer(); }));
+  }
+
+  function stepSlide(d) {
+    const a = S.artifact(av.id);
+    if (!a || a.type !== 'presentation') return;
+    const n = a.data.slides.length;
+    av.slide = Math.max(0, Math.min(n - 1, av.slide + d));
+    renderViewer();
+  }
+
+  U.openViewer = (id) => { av.id = id; av.slide = 0; viewer.classList.add('open'); renderViewer(); };
+  U.isViewerOpen = () => viewer.classList.contains('open');
+  document.addEventListener('keydown', (e) => {
+    if (!viewer.classList.contains('open')) return;
+    if (e.key === 'Escape') closeViewer();
+    else if (e.key === 'ArrowRight') stepSlide(1);
+    else if (e.key === 'ArrowLeft') stepSlide(-1);
+  });
+  // keep the viewer honest if the artifact/chat is deleted or saved elsewhere
+  S.subscribe(() => { if (viewer.classList.contains('open')) renderViewer(); });
+
+  // ----- "แชททั้งหมด" modal: every chat that has artifacts (Figma 547:100145) -----
+  const am = document.createElement('div');
+  am.className = 'am-overlay';
+  document.body.appendChild(am);
+  const amState = { q: '', asc: false, search: false };
+
+  function closeAm() { am.classList.remove('open'); am.innerHTML = ''; }
+
+  function renderAm() {
+    let groups = S.chats.map(c => ({ c, arts: S.artifactsOf(c.id) })).filter(g => g.arts.length);
+    const q = amState.q.trim().toLowerCase();
+    if (q) groups = groups.filter(g => g.c.title.toLowerCase().includes(q) || g.arts.some(a => (a.short + a.name).toLowerCase().includes(q)));
+    groups.forEach(g => { g.t = Math.max(...g.arts.map(a => a.createdAt)); });
+    groups.sort((a, b) => amState.asc ? a.t - b.t : b.t - a.t);
+    am.innerHTML = `
+      <div class="am" role="dialog" aria-label="แชททั้งหมด">
+        <div class="am-inner">
+          <div class="am-head">
+            <h2>แชททั้งหมด</h2>
+            <div class="am-tools">
+              ${amState.search ? `<input class="am-search" id="amQ" type="text" placeholder="ค้นหาแชทหรือผลงาน" value="${esc(amState.q)}">` : ''}
+              <button class="am-ico" id="amSearchBtn" aria-label="ค้นหา"><img src="${ICON('art-search')}" width="16" height="16" alt=""></button>
+              <button class="am-ico ${amState.asc ? 'flip' : ''}" id="amSort" aria-label="เรียงลำดับ"><img src="${ICON('art-sort')}" width="24" height="24" alt=""></button>
+              <button class="am-new" id="amNew"><img src="${ICON('art-chat')}" width="16" height="16" alt=""><span>New</span></button>
+            </div>
+          </div>
+          ${groups.length ? groups.map(g => `
+            <div class="am-group">
+              <button class="am-chat" data-am-chat="${g.c.id}"><span class="t">${esc(g.c.title)}</span><span class="time">${U.relTime(g.t)}</span></button>
+              <div class="am-list">${g.arts.map(a => `
+                <button class="am-card" data-am-art="${a.id}">
+                  <span class="am-icon">${typeIconHtml(a)}</span>
+                  <span class="am-txt"><span class="nm"><span>${esc(a.short)}</span><img src="${ICON('art-play')}" width="16" height="16" alt="" style="transform:rotate(90deg)"></span><span class="sub">${typeLabel(a)}</span></span>
+                </button>`).join('')}</div>
+            </div>`).join('') : `<div class="am-empty">${q ? 'ไม่พบผลลัพธ์' : 'ยังไม่มีผลงานในแชทใด<br><small>เอกสารที่ AI สร้างจะเก็บเป็นร่างที่นี่ จนกว่าจะบันทึกลงไดร์</small>'}</div>`}
+        </div>
+      </div>`;
+    document.getElementById('amSearchBtn').addEventListener('click', () => { amState.search = !amState.search; if (!amState.search) amState.q = ''; renderAm(); const i = document.getElementById('amQ'); if (i) i.focus(); });
+    const qi = document.getElementById('amQ');
+    if (qi) qi.addEventListener('input', () => { amState.q = qi.value; const pos = qi.selectionStart; renderAm(); const n = document.getElementById('amQ'); n.focus(); n.setSelectionRange(pos, pos); });
+    document.getElementById('amSort').addEventListener('click', () => { amState.asc = !amState.asc; renderAm(); });
+    document.getElementById('amNew').addEventListener('click', () => { closeAm(); S.newBlank(); if (!isVisible('chatbotPage')) openChatbotPage(); });
+    am.querySelectorAll('[data-am-chat]').forEach(b => b.addEventListener('click', () => { closeAm(); S.open(b.dataset.amChat); if (!isVisible('chatbotPage')) openChatbotPage(); }));
+    am.querySelectorAll('[data-am-art]').forEach(b => b.addEventListener('click', () => { closeAm(); U.openViewer(b.dataset.amArt); }));
+  }
+
+  U.artifactsModal = () => { amState.q = ''; amState.search = false; am.classList.add('open'); renderAm(); };
+  am.addEventListener('mousedown', (e) => { if (e.target === am) closeAm(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && am.classList.contains('open') && !viewer.classList.contains('open')) closeAm(); });
+  S.subscribe(() => { if (am.classList.contains('open')) renderAm(); });
+
   // ----- dialogs -----
   const overlay = document.createElement('div');
   overlay.className = 'drv-modal-overlay';
-  overlay.style.zIndex = '360';
+  overlay.style.zIndex = '400';
   document.body.appendChild(overlay);
   const closeOverlay = () => { overlay.classList.remove('open'); overlay.innerHTML = ''; };
   overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) closeOverlay(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeOverlay(); });
+
+  U.renameDialog = (chatId) => {
+    const c = S.chat(chatId);
+    if (!c) return;
+    overlay.innerHTML = `
+      <div class="drv-modal" role="dialog" aria-label="เปลี่ยนชื่อแชท">
+        <div class="drv-modal-head"><img src="${ICON('art-edit')}" width="16" height="16" alt=""><span>Rename</span></div>
+        <div class="drv-modal-body"><div class="drv-modal-field"><label for="rnInput">ชื่อแชท</label><input id="rnInput" type="text" value="${esc(c.title)}" autocomplete="off"></div></div>
+        <div class="drv-modal-actions"><button class="drv-modal-cancel" id="rnCancel">ยกเลิก</button><button class="drv-modal-ok" id="rnOk">ตกลง</button></div>
+      </div>`;
+    overlay.classList.add('open');
+    const inp = document.getElementById('rnInput');
+    inp.focus(); inp.select();
+    const ok = document.getElementById('rnOk');
+    const sync = () => { ok.disabled = !inp.value.trim(); };
+    sync();
+    inp.addEventListener('input', sync);
+    const submit = () => { if (ok.disabled) return; S.rename(chatId, inp.value); closeOverlay(); };
+    ok.addEventListener('click', submit);
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    document.getElementById('rnCancel').addEventListener('click', closeOverlay);
+  };
 
   // Pick where to save one or more drafts as real Drive files.
   U.saveDialog = (ids, after) => {
