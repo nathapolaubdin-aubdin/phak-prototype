@@ -919,10 +919,15 @@
     const first = driveAddOverlay.querySelector('input');
     first.focus();
     const err = document.getElementById('drvAddError');
-    driveAddOverlay.querySelectorAll('input,textarea').forEach(el => el.addEventListener('input', () => { err.textContent = ''; }));
+    const ok = document.getElementById('drvAddOk');
+    // ตกลง stays disabled until there is something to submit.
+    const fields = Array.from(driveAddOverlay.querySelectorAll('input,textarea'));
+    const syncOk = () => { ok.disabled = !fields.some(el => el.value.trim()); };
+    syncOk();
+    fields.forEach(el => el.addEventListener('input', () => { err.textContent = ''; syncOk(); }));
     document.getElementById('drvAddCancel').addEventListener('click', closeDriveAddModal);
-    document.getElementById('drvAddOk').addEventListener('click', () => submitDriveAddModal(kind));
-    driveAddOverlay.querySelectorAll('input').forEach(el => el.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitDriveAddModal(kind); }));
+    ok.addEventListener('click', () => submitDriveAddModal(kind));
+    driveAddOverlay.querySelectorAll('input').forEach(el => el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !ok.disabled) submitDriveAddModal(kind); }));
   }
 
   function driveYoutubeId(url) {
@@ -936,7 +941,7 @@
     if (kind === 'note') {
       const title = document.getElementById('drvAddTitle').value.trim();
       const text = document.getElementById('drvAddBody').value.trim();
-      if (!title && !text) { err.textContent = 'กรอกหัวข้อหรือเนื้อหาก่อนนะ'; return; }
+      if (!title && !text) return;
       const name = (title || text.split('\n')[0]).slice(0, 40).trim();
       driveAddFile(driveEsc(name) + '.txt', { note: { title: driveEsc(title), body: driveEsc(text).replace(/\n/g, '<br>') } });
       closeDriveAddModal();

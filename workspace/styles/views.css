@@ -2774,7 +2774,7 @@
 
 .drv-modal-field input, .drv-modal-field textarea {
     width: 100%; box-sizing: border-box; background: transparent; color: #fff; font-family: inherit; font-size: 16px;
-    border: 1px solid #606060; border-radius: 4px; padding: 8px; outline: none;
+    border: 1px solid #606060; border-radius: 4px; padding: 8px; outline: none; text-overflow: ellipsis;
   }
 
 .drv-modal-field textarea { height: 155px; resize: none; }
@@ -2799,7 +2799,9 @@
     color: #fff; font-family: inherit; font-size: 16px; font-weight: 500; cursor: pointer;
   }
 
-.drv-modal-ok:hover { filter: brightness(1.12); }
+.drv-modal-ok:hover:not(:disabled) { filter: brightness(1.12); }
+
+.drv-modal-ok:disabled { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.4); cursor: not-allowed; }
 
 .drv-progress { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 0 8px; }
 
